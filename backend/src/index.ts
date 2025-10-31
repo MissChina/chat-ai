@@ -24,7 +24,11 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes will be added here
+// Import routes
+import authRoutes from './routes/auth.routes';
+import chatroomRoutes from './routes/chatroom.routes';
+
+// API routes
 app.get('/api', (req: Request, res: Response) => {
   res.json({ 
     message: 'AI Chatroom API',
@@ -37,6 +41,10 @@ app.get('/api', (req: Request, res: Response) => {
     }
   });
 });
+
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/chatrooms', chatroomRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -60,10 +68,19 @@ const startServer = async () => {
     await prisma.$connect();
     console.log('✓ Database connected');
 
-    // Initialize Redis connection
+    // Initialize Redis connection (optional in development)
     const redis = getRedis();
-    await redis.ping();
-    console.log('✓ Redis connected');
+    if (redis) {
+      try {
+        await redis.connect();
+        await redis.ping();
+        console.log('✓ Redis connected');
+      } catch (error) {
+        console.warn('⚠ Redis not available (optional in development)');
+      }
+    } else {
+      console.warn('⚠ Redis not configured (optional in development)');
+    }
 
     // Initialize AI adapters
     AIAdapterRegistry.initialize();

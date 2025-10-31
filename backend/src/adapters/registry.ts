@@ -2,21 +2,24 @@ import { AIAdapterBase } from './types';
 import { GPT4Adapter } from './gpt4-adapter';
 import { ClaudeAdapter } from './claude-adapter';
 
+// Type for adapter constructor
+type AIAdapterConstructor = new () => AIAdapterBase;
+
 export class AIAdapterRegistry {
-  private static adapters: Map<string, typeof AIAdapterBase> = new Map();
+  private static adapters: Map<string, AIAdapterConstructor> = new Map();
   private static instances: Map<string, AIAdapterBase> = new Map();
 
   // Register all available adapters
   static initialize() {
-    this.register('gpt-4', GPT4Adapter);
-    this.register('gpt-4-turbo', GPT4Adapter);
-    this.register('gpt-3.5-turbo', GPT4Adapter);
-    this.register('claude-3-5-sonnet-20241022', ClaudeAdapter);
-    this.register('claude-3-opus', ClaudeAdapter);
+    this.register('gpt-4', GPT4Adapter as AIAdapterConstructor);
+    this.register('gpt-4-turbo', GPT4Adapter as AIAdapterConstructor);
+    this.register('gpt-3.5-turbo', GPT4Adapter as AIAdapterConstructor);
+    this.register('claude-3-5-sonnet-20241022', ClaudeAdapter as AIAdapterConstructor);
+    this.register('claude-3-opus', ClaudeAdapter as AIAdapterConstructor);
     console.log('AI Adapters initialized:', Array.from(this.adapters.keys()));
   }
 
-  static register(modelId: string, adapterClass: typeof AIAdapterBase) {
+  static register(modelId: string, adapterClass: AIAdapterConstructor) {
     this.adapters.set(modelId, adapterClass);
   }
 

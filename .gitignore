@@ -41,8 +41,11 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+dev.db
+dev.db-journal
 
 # Prisma
-prisma/migrations/
+# Note: migrations are committed to track schema changes
+node_modules/.prisma/
 
 /generated/prisma

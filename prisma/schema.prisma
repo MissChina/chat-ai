@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -57,7 +57,7 @@ model ChatRoom {
   messageCount   Int       @default(0)
   isStarred      Boolean   @default(false)
   isPinned       Boolean   @default(false)
-  tags           String[]  @default([])
+  tags           String?   // JSON string for tags array
   deletedAt      DateTime?
   deletedBy      String?
 
@@ -169,9 +169,9 @@ model UserQuota {
   id               String    @id @default(uuid())
   userId           String    @unique
   plan             String    @default("free") // free, basic, pro, enterprise
-  totalTokensLimit BigInt?   // null means unlimited
-  tokensUsed       BigInt    @default(0)
-  tokensRemaining  BigInt?
+  totalTokensLimit Int?      // null means unlimited
+  tokensUsed       Int       @default(0)
+  tokensRemaining  Int?
   resetDate        DateTime
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -191,7 +191,7 @@ model TokenUsageLog {
   inputTokens      Int
   outputTokens     Int
   totalTokens      Int
-  estimatedCost    Decimal  @db.Decimal(10, 4)
+  estimatedCost    Float
   timestamp        DateTime @default(now())
 
   // Relations
