@@ -50,7 +50,7 @@ model ChatRoom {
   name           String
   userId         String
   defaultMode    String    @default("normal") // normal | sequential
-  globalConfig   Json?
+  globalConfig   Json?     // Prisma handles JSON type across different databases
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   lastActiveAt   DateTime  @default(now())

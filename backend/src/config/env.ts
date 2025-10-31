@@ -6,9 +6,9 @@ dotenv.config();
 export const config = {
   port: process.env.PORT || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
-  databaseUrl: process.env.DATABASE_URL!,
+  databaseUrl: process.env.DATABASE_URL || 'file:./dev.db',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
-  jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
+  jwtSecret: process.env.JWT_SECRET || 'demo-secret-key-change-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   openaiApiKey: process.env.OPENAI_API_KEY,
@@ -19,12 +19,29 @@ export const config = {
 
 // Validate critical env variables
 const validateEnv = () => {
-  const required = ['DATABASE_URL', 'JWT_SECRET'];
-  const missing = required.filter((key) => !process.env[key]);
+  const warnings: string[] = [];
   
-  if (missing.length > 0) {
-    console.warn(`Warning: Missing environment variables: ${missing.join(', ')}`);
-    console.warn('Please check your .env file');
+  if (!process.env.DATABASE_URL) {
+    warnings.push('DATABASE_URL not set, using default: file:./dev.db');
+  }
+  
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('demo')) {
+    warnings.push('JWT_SECRET not set or using demo value - CHANGE IN PRODUCTION!');
+  }
+  
+  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    warnings.push('No AI API keys configured - users must provide their own');
+  }
+  
+  if (warnings.length > 0 && config.nodeEnv !== 'production') {
+    console.warn('⚠ Environment configuration warnings:');
+    warnings.forEach(w => console.warn(`  - ${w}`));
+  } else if (warnings.length > 0 && config.nodeEnv === 'production') {
+    console.error('❌ Critical environment variables missing in production!');
+    warnings.forEach(w => console.error(`  - ${w}`));
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('demo')) {
+      throw new Error('JWT_SECRET must be set to a secure value in production');
+    }
   }
 };
 

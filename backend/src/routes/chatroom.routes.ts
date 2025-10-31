@@ -8,6 +8,7 @@ import {
   updateAIMemberOrder,
 } from '../controllers/chatroom.controller';
 import { authenticate } from '../middleware/auth';
+import { createLimiter, apiLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -15,13 +16,13 @@ const router = Router();
 router.use(authenticate);
 
 // Chatroom CRUD
-router.post('/', createChatRoom);
-router.get('/', getChatRooms);
-router.get('/:id', getChatRoomById);
-router.put('/:id', updateChatRoom);
-router.delete('/:id', deleteChatRoom);
+router.post('/', createLimiter, createChatRoom);
+router.get('/', apiLimiter, getChatRooms);
+router.get('/:id', apiLimiter, getChatRoomById);
+router.put('/:id', apiLimiter, updateChatRoom);
+router.delete('/:id', apiLimiter, deleteChatRoom);
 
 // AI member management
-router.put('/:id/ai-members/order', updateAIMemberOrder);
+router.put('/:id/ai-members/order', apiLimiter, updateAIMemberOrder);
 
 export default router;

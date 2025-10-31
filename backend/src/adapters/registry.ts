@@ -2,25 +2,31 @@ import { AIAdapterBase } from './types';
 import { GPT4Adapter } from './gpt4-adapter';
 import { ClaudeAdapter } from './claude-adapter';
 
-// Type for adapter constructor
-type AIAdapterConstructor = new () => AIAdapterBase;
+// Type for adapter factory function
+type AIAdapterFactory = (modelId: string) => AIAdapterBase;
 
 export class AIAdapterRegistry {
-  private static adapters: Map<string, AIAdapterConstructor> = new Map();
+  private static factories: Map<string, AIAdapterFactory> = new Map();
   private static instances: Map<string, AIAdapterBase> = new Map();
 
   // Register all available adapters
   static initialize() {
-    this.register('gpt-4', GPT4Adapter as AIAdapterConstructor);
-    this.register('gpt-4-turbo', GPT4Adapter as AIAdapterConstructor);
-    this.register('gpt-3.5-turbo', GPT4Adapter as AIAdapterConstructor);
-    this.register('claude-3-5-sonnet-20241022', ClaudeAdapter as AIAdapterConstructor);
-    this.register('claude-3-opus', ClaudeAdapter as AIAdapterConstructor);
-    console.log('AI Adapters initialized:', Array.from(this.adapters.keys()));
+    // OpenAI models use the same adapter with different model IDs
+    const gptFactory = (modelId: string) => new GPT4Adapter(modelId);
+    this.register('gpt-4', gptFactory);
+    this.register('gpt-4-turbo', gptFactory);
+    this.register('gpt-3.5-turbo', gptFactory);
+    
+    // Claude models
+    const claudeFactory = (modelId: string) => new ClaudeAdapter();
+    this.register('claude-3-5-sonnet-20241022', claudeFactory);
+    this.register('claude-3-opus', claudeFactory);
+    
+    console.log('AI Adapters initialized:', Array.from(this.factories.keys()));
   }
 
-  static register(modelId: string, adapterClass: AIAdapterConstructor) {
-    this.adapters.set(modelId, adapterClass);
+  static register(modelId: string, factory: AIAdapterFactory) {
+    this.factories.set(modelId, factory);
   }
 
   static async getAdapter(modelId: string): Promise<AIAdapterBase> {
@@ -29,14 +35,14 @@ export class AIAdapterRegistry {
       return this.instances.get(modelId)!;
     }
 
-    // Get adapter class
-    const AdapterClass = this.adapters.get(modelId);
-    if (!AdapterClass) {
+    // Get adapter factory
+    const factory = this.factories.get(modelId);
+    if (!factory) {
       throw new Error(`AI model adapter not found: ${modelId}`);
     }
 
     // Create and initialize instance
-    const adapter = new AdapterClass();
+    const adapter = factory(modelId);
     await adapter.initialize();
 
     // Cache instance

@@ -13,20 +13,34 @@ import {
 import { config } from '../config/env';
 
 export class GPT4Adapter extends AIAdapterBase {
-  modelId = 'gpt-4';
-  modelName = 'GPT-4';
+  modelId: string;
+  modelName: string;
   provider = 'openai';
   capabilities: AICapabilities = {
     streaming: true,
     vision: true,
     functionCalling: true,
   };
-  pricing: Pricing = {
-    input: 0.03,  // $0.03 per 1K tokens
-    output: 0.06, // $0.06 per 1K tokens
-  };
+  pricing: Pricing;
 
   private client?: OpenAI;
+
+  constructor(modelId: string = 'gpt-4') {
+    super();
+    this.modelId = modelId;
+    
+    // Set model name and pricing based on model ID
+    if (modelId.includes('gpt-4-turbo') || modelId.includes('gpt-4-1106')) {
+      this.modelName = 'GPT-4 Turbo';
+      this.pricing = { input: 0.01, output: 0.03 };
+    } else if (modelId.includes('gpt-3.5-turbo')) {
+      this.modelName = 'GPT-3.5 Turbo';
+      this.pricing = { input: 0.0005, output: 0.0015 };
+    } else {
+      this.modelName = 'GPT-4';
+      this.pricing = { input: 0.03, output: 0.06 };
+    }
+  }
 
   async initialize(): Promise<void> {
     const apiKey = config.openaiApiKey;
