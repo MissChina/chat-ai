@@ -1,0 +1,42 @@
+{
+  "name": "chat-ai",
+  "version": "1.0.0",
+  "description": "AI Chatroom with Sequential Speaking Mode",
+  "main": "backend/dist/index.js",
+  "scripts": {
+    "dev": "cd backend && nodemon src/index.ts",
+    "build": "cd backend && tsc",
+    "start": "cd backend && node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["ai", "chatroom", "openai", "claude", "chatbot"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "@prisma/client": "^6.18.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "ioredis": "^5.8.2",
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^6.7.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.9.2",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.18.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
