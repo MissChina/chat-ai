@@ -1,0 +1,3849 @@
+明白了！让我重新编写一个更加专注于**实现细节、技术难点、创建过程**的 MVP 文档。
+
+---
+
+# AI 聊天室顺序发言系统 - 完整 MVP 技术实现文档
+
+## 文档信息
+- **版本**：v1.0
+- **日期**：2025-10-31
+- **作者**：产品技术团队
+- **目标**：详细阐述产品功能、实现难点、技术方案、开发流程
+
+---
+
+## 目录
+
+1. [产品核心概念](#一产品核心概念)
+2. [功能架构图](#二功能架构图)
+3. [核心功能实现方案](#三核心功能实现方案)
+4. [技术难点与解决方案](#四技术难点与解决方案)
+5. [数据模型设计](#五数据模型设计)
+6. [系统架构设计](#六系统架构设计)
+7. [关键业务流程](#七关键业务流程)
+8. [界面交互规范](#八界面交互规范)
+9. [开发实施计划](#九开发实施计划)
+10. [质量保证方案](#十质量保证方案)
+
+---
+
+## 一、产品核心概念
+
+### 1.1 产品定位
+
+**一句话描述**：
+一个支持多 AI 模型集成的智能聊天平台，通过创新的"顺序发言"机制实现 AI 之间的递进式讨论。
+
+**核心价值**：
+- **多维视角**：同一问题获得多个 AI 的不同观点
+- **深度讨论**：顺序发言形成渐进式的讨论链条
+- **灵活控制**：用户完全掌控对话节奏和流程
+- **知识沉淀**：完整记录讨论过程，形成可复用的知识库
+
+### 1.2 核心功能模块
+
+```
+产品功能全景图：
+
+┌─────────────────────────────────────────────────────────┐
+│                    AI 聊天室系统                         │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ 账户系统     │  │ 聊天室管理    │  │ AI 成员管理  │  │
+│  ├─────────────┤  ├──────────────┤  ├──────────────┤  │
+│  │ • 注册登录   │  │ • 创建聊天室  │  │ • 添加 AI    │  │
+│  │ • 个人设置   │  │ • 重命名      │  │ • 移除 AI    │  │
+│  │ • API 配置   │  │ • 删除        │  │ • 排序设置   │  │
+│  │ • 使用统计   │  │ • 列表管理    │  │ • 个性配置   │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │          对话模式（核心功能）                      │  │
+│  ├──────────────────────────────────────────────────┤  │
+│  │  ┌────────────┐         ┌────────────────────┐  │  │
+│  │  │ 普通模式    │         │ 顺序发言模式 ⭐    │  │  │
+│  │  ├────────────┤         ├────────────────────┤  │  │
+│  │  │ • 所有 AI   │         │ • AI 依次发言      │  │  │
+│  │  │   同时响应  │         │ • 递进式讨论       │  │  │
+│  │  │ • 快速对比  │         │ • 补充机制         │  │  │
+│  │  │ • 独立回答  │         │ • 用户控制节奏     │  │  │
+│  │  └────────────┘         └────────────────────┘  │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                         │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ 消息管理     │  │ 历史记录      │  │ 导出分享     │  │
+│  ├─────────────┤  ├──────────────┤  ├──────────────┤  │
+│  │ • 流式输出   │  │ • 对话历史    │  │ • Markdown   │  │
+│  │ • 富文本展示 │  │ • 搜索查询    │  │ • PDF        │  │
+│  │ • 操作功能   │  │ • 标签分类    │  │ • JSON       │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 1.3 MVP 范围界定
+
+**P0（必须实现）**：
+- ✅ 用户账户系统
+- ✅ 聊天室 CRUD
+- ✅ AI 成员管理（至少 3 个 AI）
+- ✅ 普通对话模式
+- ✅ **顺序发言模式**（核心功能）
+- ✅ 补充说明机制
+- ✅ 流式输出展示
+- ✅ 对话历史保存
+
+**P1（重要功能）**：
+- ✅ AI 个性化配置
+- ✅ 进度可视化
+- ✅ 暂停/恢复
+- ✅ 导出记录
+
+**P2（后续版本）**：
+- 自由讨论模式
+- @ 提及功能
+- 多模态支持
+- 团队协作
+
+---
+
+## 二、功能架构图
+
+### 2.1 系统整体架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                        用户界面层                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐ │
+│  │ 聊天室列表 │  │ 对话区域  │  │ 配置面板  │  │ 用户中心 │ │
+│  └──────────┘  └──────────┘  └──────────┘  └─────────┘ │
+└─────────────────────────────────────────────────────────┘
+                            ↕
+┌─────────────────────────────────────────────────────────┐
+│                      业务逻辑层                          │
+│  ┌────────────────┐  ┌─────────────────────────────┐   │
+│  │ 聊天室管理服务  │  │   对话模式控制器             │   │
+│  ├────────────────┤  ├─────────────────────────────┤   │
+│  │ • 创建/删除     │  │ • 普通模式处理器             │   │
+│  │ • 列表查询      │  │ • 顺序发言控制器 ⭐         │   │
+│  │ • 配置管理      │  │   - 队列管理                │   │
+│  └────────────────┘  │   - 状态流转                │   │
+│                      │   - 补充机制                │   │
+│  ┌────────────────┐  │   - 上下文构建              │   │
+│  │ AI 集成服务     │  └─────────────────────────────┘   │
+│  ├────────────────┤                                    │
+│  │ • 统一接口      │  ┌─────────────────────────────┐   │
+│  │ • 模型适配      │  │   消息处理服务               │   │
+│  │ • 流式处理      │  ├─────────────────────────────┤   │
+│  │ • 错误处理      │  │ • 历史记录管理              │   │
+│  └────────────────┘  │ • 上下文构建                │   │
+│                      │ • 格式化渲染                │   │
+│                      └─────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                            ↕
+┌─────────────────────────────────────────────────────────┐
+│                      数据持久层                          │
+│  ┌────────────┐  ┌────────────┐  ┌────────────────┐    │
+│  │ 用户数据库  │  │ 聊天室数据  │  │ 消息历史存储    │    │
+│  └────────────┘  └────────────┘  └────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+                            ↕
+┌─────────────────────────────────────────────────────────┐
+│                    外部服务集成层                        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
+│  │ OpenAI   │  │ Anthropic│  │  阿里云  │  │ 其他 AI │ │
+│  │ (GPT-4)  │  │ (Claude) │  │(通义千问)│  │ 模型... │ │
+│  └──────────┘  └──────────┘  └──────────┘  └────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 2.2 顺序发言核心流程图
+
+```
+用户发起话题
+    │
+    ↓
+┌─────────────────────┐
+│ 选择对话模式         │
+├─────────────────────┤
+│ • 普通模式 → 并发执行 │
+│ • 顺序模式 → 下方流程 │
+└─────────────────────┘
+    │
+    ↓
+┌─────────────────────────────────────┐
+│ 初始化顺序发言会话                    │
+├─────────────────────────────────────┤
+│ 1. 获取 AI 发言顺序                   │
+│ 2. 创建发言队列                       │
+│ 3. 初始化会话状态                     │
+│ 4. 记录用户问题                       │
+└─────────────────────────────────────┘
+    │
+    ↓
+┌─────────────────────────────────────┐
+│ 第 N 位 AI 发言流程（循环）           │
+├─────────────────────────────────────┤
+│                                     │
+│  ┌────────────────────────────┐   │
+│  │ 1. 构建 AI 上下文           │   │
+│  │    • 用户问题               │   │
+│  │    • 前面所有 AI 的回答     │   │
+│  │    • 用户的追问             │   │
+│  │    • 角色定位提示           │   │
+│  └────────────────────────────┘   │
+│            ↓                        │
+│  ┌────────────────────────────┐   │
+│  │ 2. 调用 AI API              │   │
+│  │    • 流式请求               │   │
+│  │    • 实时推送到前端         │   │
+│  └────────────────────────────┘   │
+│            ↓                        │
+│  ┌────────────────────────────┐   │
+│  │ 3. 前端流式展示             │   │
+│  │    • 逐字显示               │   │
+│  │    • 格式化渲染             │   │
+│  └────────────────────────────┘   │
+│            ↓                        │
+│  ┌────────────────────────────┐   │
+│  │ 4. 发言完成                 │   │
+│  │    • 保存完整回答           │   │
+│  │    • 更新 AI 状态           │   │
+│  │    • 展示操作选项           │   │
+│  └────────────────────────────┘   │
+│            ↓                        │
+│  ┌────────────────────────────┐   │
+│  │ 5. 等待用户操作（暂停点）   │   │
+│  └────────────────────────────┘   │
+│            │                        │
+│            ├──[补充]─→ 返回步骤 1   │
+│            │                        │
+│            ├──[提问]─→ 单独对话     │
+│            │           └─→ 返回步骤 5│
+│            │                        │
+│            ├──[暂停]─→ 保存状态     │
+│            │                        │
+│            ├──[下一位]              │
+│            │     ↓                  │
+│            │  判断：                │
+│            │  • 有下一位 → 循环     │
+│            │  • 无下一位 → 结束     │
+│            │                        │
+│            └──[跳过]─→ 直接结束     │
+│                                     │
+└─────────────────────────────────────┘
+    │
+    ↓
+┌─────────────────────────────────────┐
+│ 本轮讨论结束                         │
+├─────────────────────────────────────┤
+│ • 生成讨论总结                       │
+│ • 展示所有观点                       │
+│ • 提供导出选项                       │
+│ • 开启新一轮或返回普通模式           │
+└─────────────────────────────────────┘
+```
+
+---
+
+## 三、核心功能实现方案
+
+### 3.1 聊天室管理
+
+#### 3.1.1 数据结构设计
+
+**聊天室实体**：
+
+```
+ChatRoom {
+  id: UUID (主键，唯一标识)
+  name: String (聊天室名称，可重复)
+  userId: UUID (所属用户 ID)
+  aiMembers: Array<AIMember> (AI 成员列表)
+  defaultMode: Enum (默认对话模式：normal | sequential)
+  globalConfig: Object (全局配置)
+  createdAt: DateTime
+  updatedAt: DateTime
+  lastActiveAt: DateTime
+  messageCount: Integer (消息总数)
+  isStarred: Boolean (是否收藏)
+  isPinned: Boolean (是否固定)
+  tags: Array<String> (标签)
+  metadata: JSON (扩展字段)
+}
+
+AIMember {
+  aiModelId: String (AI 模型标识：gpt-4, claude, qwen)
+  displayName: String (显示名称)
+  avatarColor: String (头像颜色)
+  order: Integer (发言顺序)
+  isEnabled: Boolean (是否启用)
+  config: AIConfig (个性化配置)
+}
+
+AIConfig {
+  systemPrompt: String (角色提示词)
+  temperature: Float (0.0-1.0)
+  maxTokens: Integer
+  replyTrigger: Enum (始终回复 | 仅顺序模式 | 仅提及)
+  contextWindow: Integer (上下文窗口大小)
+}
+
+GlobalConfig {
+  systemPrompt: String (全局系统提示词)
+  responseStyle: String (回答风格)
+  responseLength: String (回答长度)
+  language: String (语言)
+  enableCodeHighlight: Boolean
+  enableMarkdown: Boolean
+  enableStreaming: Boolean
+}
+```
+
+#### 3.1.2 创建流程实现逻辑
+
+**步骤分解**：
+
+1. **前端表单验证**
+   - 聊天室名称非空校验（1-50 字符）
+   - 至少选择一个 AI 成员
+   - 验证用户 API Key 配置（如果需要）
+
+2. **后端处理**
+   ```
+   API: POST /api/chatrooms
+   
+   请求体：
+   {
+     name: "技术方案讨论",
+     aiMembers: ["gpt-4", "claude", "qwen"],
+     defaultMode: "sequential",
+     template: "tech-discussion" (可选)
+   }
+   
+   处理流程：
+   1. 验证用户身份（JWT Token）
+   2. 验证请求参数
+   3. 生成唯一 UUID
+   4. 如果使用模板，加载模板配置
+   5. 为每个 AI 创建默认配置
+   6. 保存到数据库
+   7. 返回完整聊天室对象
+   ```
+
+3. **数据库操作**
+   ```
+   Transaction {
+     INSERT INTO chatrooms (id, name, user_id, ...)
+     INSERT INTO ai_members (chatroom_id, ai_model_id, ...)
+     INSERT INTO ai_configs (ai_member_id, ...)
+     COMMIT
+   }
+   ```
+
+4. **前端响应处理**
+   - 更新左侧列表（添加新聊天室到顶部）
+   - 导航到新聊天室
+   - 显示欢迎引导
+
+#### 3.1.3 列表查询优化
+
+**查询需求**：
+- 支持分页（每页 20 个）
+- 支持按最后活跃时间排序
+- 支持按名称搜索
+- 支持按标签筛选
+- 固定和收藏的聊天室优先展示
+
+**SQL 查询示例逻辑**：
+```
+查询语句结构：
+
+SELECT 
+  cr.*,
+  COUNT(m.id) as message_count,
+  (SELECT COUNT(*) FROM ai_members WHERE chatroom_id = cr.id) as ai_count
+FROM chatrooms cr
+LEFT JOIN messages m ON m.chatroom_id = cr.id
+WHERE 
+  cr.user_id = :userId
+  AND cr.deleted_at IS NULL
+  AND (cr.name ILIKE :searchTerm OR :searchTerm IS NULL)
+GROUP BY cr.id
+ORDER BY 
+  cr.is_pinned DESC,
+  cr.is_starred DESC,
+  cr.last_active_at DESC
+LIMIT :limit OFFSET :offset
+```
+
+**前端缓存策略**：
+- 使用虚拟滚动优化大量聊天室展示
+- 缓存最近访问的聊天室详情
+- 定期刷新活跃时间（轮询或 WebSocket 推送）
+
+#### 3.1.4 删除安全机制
+
+**软删除实现**：
+```
+数据库字段：
+- deleted_at: DateTime (NULL 表示未删除)
+- deleted_by: UUID (删除操作人)
+
+删除操作：
+UPDATE chatrooms 
+SET 
+  deleted_at = NOW(),
+  deleted_by = :userId
+WHERE id = :chatroomId
+
+查询时过滤：
+WHERE deleted_at IS NULL
+
+恢复操作（回收站功能）：
+UPDATE chatrooms 
+SET deleted_at = NULL 
+WHERE id = :chatroomId 
+  AND deleted_at > NOW() - INTERVAL '30 days'
+```
+
+**级联删除处理**：
+```
+删除聊天室时需要处理的关联数据：
+
+1. 保留消息历史（用于导出和恢复）
+   - 标记为已删除，但不物理删除
+   
+2. 删除 AI 配置
+   - 物理删除（因为可以重新创建）
+   
+3. 删除相关订阅和通知
+   - 物理删除
+   
+4. 保留统计数据
+   - 用于用户数据分析
+```
+
+### 3.2 AI 成员管理
+
+#### 3.2.1 AI 模型集成架构
+
+**统一接口设计**：
+
+```
+AI 适配器接口规范：
+
+interface AIAdapter {
+  // 基础信息
+  modelId: string
+  modelName: string
+  provider: string (openai | anthropic | alibaba)
+  
+  // 能力标识
+  capabilities: {
+    streaming: boolean
+    vision: boolean
+    functionCalling: boolean
+  }
+  
+  // 核心方法
+  sendMessage(params): Promise<AIResponse>
+  sendStreamingMessage(params): AsyncIterator<AIChunk>
+  
+  // 配置验证
+  validateConfig(config): boolean
+  
+  // 成本计算
+  calculateCost(tokens): number
+}
+
+请求参数：
+{
+  messages: Array<Message>
+  systemPrompt: string
+  temperature: number
+  maxTokens: number
+  stream: boolean
+  userId: string (用于追踪)
+}
+
+响应格式：
+{
+  content: string
+  finishReason: string
+  usage: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+  model: string
+  timestamp: DateTime
+}
+```
+
+**GPT-4 适配器实现要点**：
+```
+GPT4Adapter implements AIAdapter {
+  
+  构造函数：
+  - 初始化 OpenAI Client
+  - 配置 API Key
+  - 设置超时和重试策略
+  
+  sendStreamingMessage：
+  1. 构建 OpenAI API 请求
+  2. 设置 stream: true
+  3. 处理 SSE 流
+  4. 解析每个 chunk
+  5. 转换为统一格式
+  6. yield 返回给调用方
+  
+  错误处理：
+  - API 限流 → 重试（指数退避）
+  - 超时 → 返回部分结果
+  - API Key 无效 → 提示用户配置
+  - 内容过滤 → 返回过滤原因
+}
+```
+
+**Claude 适配器实现要点**：
+```
+ClaudeAdapter implements AIAdapter {
+  
+  差异点处理：
+  1. API 格式不同：
+     - OpenAI 使用 messages 数组
+     - Claude 使用 prompt 字符串（需转换）
+  
+  2. 流式响应格式不同：
+     - 需要适配 Claude 的 SSE 格式
+  
+  3. Token 计算方式不同：
+     - 使用 Claude 官方 tokenizer
+  
+  4. 系统提示词位置不同：
+     - Claude 需要放在 system 字段
+}
+```
+
+**通义千问适配器实现要点**：
+```
+QwenAdapter implements AIAdapter {
+  
+  差异点：
+  1. 使用阿里云 API
+  2. 需要 AccessKey 认证
+  3. 支持特定的中文优化参数
+  4. 流式响应需要特殊处理
+}
+```
+
+#### 3.2.2 AI 排序和配置
+
+**发言顺序存储**：
+```
+ai_members 表字段：
+- id: UUID
+- chatroom_id: UUID
+- ai_model_id: String
+- display_name: String
+- order: Integer (发言顺序，从 1 开始)
+- is_enabled: Boolean
+- created_at: DateTime
+
+索引：
+CREATE INDEX idx_ai_members_order 
+ON ai_members(chatroom_id, order);
+
+更新顺序的事务处理：
+BEGIN;
+  UPDATE ai_members SET order = 99 WHERE id = :id1;
+  UPDATE ai_members SET order = 1 WHERE id = :id2;
+  UPDATE ai_members SET order = 2 WHERE id = :id1;
+  UPDATE ai_members SET order = 3 WHERE id = :id3;
+COMMIT;
+```
+
+**拖拽排序前端实现要点**：
+```
+技术选型：
+- 使用 react-beautiful-dnd 或 @dnd-kit/sortable
+
+交互流程：
+1. 用户拖动 AI 卡片
+2. 前端实时更新视觉顺序
+3. 拖动结束后发送 API 请求
+4. 后端更新数据库
+5. 成功后显示提示
+
+乐观更新：
+- 先更新 UI，再调用 API
+- 如果 API 失败，回滚 UI
+```
+
+#### 3.2.3 AI 配置继承机制
+
+**三层配置模型**：
+
+```
+配置继承逻辑：
+
+最终配置 = merge(
+  系统默认配置,
+  聊天室全局配置,
+  AI 个性化配置
+)
+
+伪代码实现：
+function getFinalConfig(aiMemberId) {
+  const systemDefault = getSystemDefaultConfig()
+  const roomGlobal = getChatroomGlobalConfig(chatroomId)
+  const aiPersonal = getAIMemberConfig(aiMemberId)
+  
+  return {
+    systemPrompt: aiPersonal.systemPrompt 
+                  || roomGlobal.systemPrompt 
+                  || systemDefault.systemPrompt,
+    temperature: aiPersonal.temperature 
+                 ?? roomGlobal.temperature 
+                 ?? systemDefault.temperature,
+    maxTokens: aiPersonal.maxTokens 
+               ?? roomGlobal.maxTokens 
+               ?? systemDefault.maxTokens,
+    // ... 其他配置
+  }
+}
+
+优先级规则：
+- ?? 运算符：仅当左侧为 null/undefined 时取右侧
+- || 运算符：左侧为 falsy 时取右侧
+- 数字类型使用 ?? （因为 0 是有效值）
+- 字符串类型使用 || （因为空字符串通常无意义）
+```
+
+**配置更新的影响范围**：
+
+```
+1. 修改系统默认配置（管理员操作）：
+   → 影响所有未自定义的聊天室和 AI
+   
+2. 修改聊天室全局配置：
+   → 影响该聊天室中未个性化配置的 AI
+   → 不影响其他聊天室
+   
+3. 修改 AI 个性化配置：
+   → 仅影响该 AI 在该聊天室的行为
+   → 不影响其他聊天室中的同模型 AI
+```
+
+### 3.3 顺序发言模式实现
+
+#### 3.3.1 会话状态管理
+
+**状态机设计**：
+
+```
+顺序发言会话状态：
+
+enum SessionState {
+  IDLE,              // 空闲，未开始
+  INITIALIZING,      // 初始化中
+  AI_THINKING,       // AI 思考中
+  AI_SPEAKING,       // AI 发言中（流式输出）
+  AI_FINISHED,       // AI 发言完成，等待用户操作
+  SUPPLEMENTING,     // AI 补充回答中
+  PAUSED,            // 用户暂停
+  COMPLETED,         // 本轮完成
+  ERROR              // 错误状态
+}
+
+状态转换规则：
+
+IDLE 
+  → (用户发起话题) → INITIALIZING
+  
+INITIALIZING 
+  → (初始化成功) → AI_THINKING
+  → (初始化失败) → ERROR
+  
+AI_THINKING 
+  → (开始生成) → AI_SPEAKING
+  → (超时/错误) → AI_FINISHED (跳过该 AI)
+  
+AI_SPEAKING 
+  → (生成完成) → AI_FINISHED
+  → (用户中断) → AI_FINISHED
+  → (错误) → ERROR
+  
+AI_FINISHED 
+  → (用户点击"补充") → SUPPLEMENTING
+  → (用户点击"下一位") → AI_THINKING (下一个 AI)
+  → (用户点击"暂停") → PAUSED
+  → (用户点击"提问") → SUPPLEMENTING
+  → (没有下一位) → COMPLETED
+  
+SUPPLEMENTING 
+  → (补充完成) → AI_FINISHED
+  → (错误) → AI_FINISHED
+  
+PAUSED 
+  → (用户恢复) → AI_THINKING (继续当前位置)
+  → (用户结束) → COMPLETED
+  
+COMPLETED 
+  → (用户开始新一轮) → IDLE
+  
+ERROR 
+  → (用户重试) → 返回上一个有效状态
+  → (用户放弃) → COMPLETED
+```
+
+**会话数据结构**：
+
+```
+SequentialSession {
+  id: UUID
+  chatroomId: UUID
+  userId: UUID
+  userQuestion: String (用户的原始问题)
+  state: SessionState (当前状态)
+  currentSpeakerIndex: Integer (当前发言者索引，0-based)
+  speakers: Array<Speaker> (发言者列表)
+  messages: Array<SessionMessage> (会话消息)
+  createdAt: DateTime
+  startedAt: DateTime
+  completedAt: DateTime (可null)
+  pausedAt: DateTime (可null)
+  metadata: JSON
+}
+
+Speaker {
+  aiMemberId: UUID
+  aiModelId: String
+  displayName: String
+  order: Integer
+  status: SpeakerStatus (waiting | speaking | finished | skipped)
+  startTime: DateTime (开始发言时间)
+  endTime: DateTime (结束发言时间)
+  supplementCount: Integer (补充次数)
+}
+
+SpeakerStatus {
+  WAITING,      // 等待发言
+  SPEAKING,     // 正在发言
+  FINISHED,     // 已完成
+  SKIPPED       // 被跳过
+}
+
+SessionMessage {
+  id: UUID
+  sessionId: UUID
+  type: MessageType
+  speaker: String (user | ai:<model_id>)
+  speakerOrder: Integer (发言顺序，用户为 0，AI 从 1 开始)
+  content: String
+  parentMessageId: UUID (如果是补充或追问，指向父消息)
+  isSupplemental: Boolean (是否是补充内容)
+  supplementRound: Integer (第几轮补充)
+  timestamp: DateTime
+  streamCompleted: Boolean (流式输出是否完成)
+  metadata: JSON
+}
+
+MessageType {
+  USER_QUESTION,      // 用户提问
+  USER_FOLLOWUP,      // 用户追问
+  AI_RESPONSE,        // AI 回答
+  AI_SUPPLEMENT,      // AI 补充
+  SYSTEM_NOTIFICATION // 系统通知
+}
+```
+
+#### 3.3.2 队列调度实现
+
+**发言队列管理器**：
+
+```
+核心数据结构：
+
+class SpeakingQueue {
+  sessionId: UUID
+  speakers: Array<Speaker>
+  currentIndex: Integer
+  state: SessionState
+  
+  构造函数(sessionId, aiMembers) {
+    初始化 speakers 数组（按 order 排序）
+    设置 currentIndex = 0
+    设置 state = IDLE
+  }
+  
+  关键方法：
+  
+  1. start() {
+    // 开始队列
+    state = INITIALIZING
+    currentIndex = 0
+    调用 nextSpeaker()
+  }
+  
+  2. nextSpeaker() {
+    // 推进到下一位
+    
+    if (currentIndex >= speakers.length) {
+      // 所有 AI 已发言
+      state = COMPLETED
+      触发 onComplete 回调
+      return
+    }
+    
+    currentSpeaker = speakers[currentIndex]
+    currentSpeaker.status = SPEAKING
+    currentSpeaker.startTime = now()
+    
+    state = AI_THINKING
+    
+    // 触发 AI 发言
+    triggerAISpeech(currentSpeaker)
+  }
+  
+  3. async triggerAISpeech(speaker) {
+    try {
+      // 构建上下文
+      context = buildContext(sessionId, currentIndex)
+      
+      // 获取 AI 配置
+      config = getFinalConfig(speaker.aiMemberId)
+      
+      // 模拟思考延迟（可选，提升体验）
+      await sleep(随机 1-3 秒)
+      
+      // 调用 AI API（流式）
+      state = AI_SPEAKING
+      
+      for await (chunk of aiAdapter.sendStreamingMessage({
+        messages: context.messages,
+        systemPrompt: context.systemPrompt,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        stream: true
+      })) {
+        // 推送 chunk 到前端
+        emitToFrontend('ai-chunk', {
+          sessionId,
+          speakerId: speaker.aiMemberId,
+          chunk: chunk.content
+        })
+      }
+      
+      // 发言完成
+      speaker.status = FINISHED
+      speaker.endTime = now()
+      state = AI_FINISHED
+      
+      // 通知前端显示操作按钮
+      emitToFrontend('speaker-finished', {
+        sessionId,
+        speaker
+      })
+      
+    } catch (error) {
+      // 错误处理
+      handleSpeakerError(speaker, error)
+    }
+  }
+  
+  4. supplement(speakerId, userPrompt) {
+    // 用户请求补充
+    
+    if (state !== AI_FINISHED) {
+      throw new Error('当前不允许补充')
+    }
+    
+    speaker = findSpeaker(speakerId)
+    speaker.supplementCount++
+    
+    state = SUPPLEMENTING
+    
+    // 构建补充上下文
+    context = buildSupplementContext(sessionId, speaker, userPrompt)
+    
+    // 再次调用 AI API
+    // （类似 triggerAISpeech，但标记为补充）
+    
+    // 完成后回到 AI_FINISHED 状态
+  }
+  
+  5. finishCurrent() {
+    // 用户点击"下一位"
+    
+    if (state !== AI_FINISHED) {
+      throw new Error('当前 AI 尚未完成')
+    }
+    
+    currentIndex++
+    nextSpeaker()
+  }
+  
+  6. pause() {
+    // 暂停
+    state = PAUSED
+    pausedAt = now()
+    保存当前状态到数据库
+  }
+  
+  7. resume() {
+    // 恢复
+    if (state !== PAUSED) {
+      throw new Error('当前未暂停')
+    }
+    
+    state = AI_FINISHED
+    pausedAt = null
+    
+    // 等待用户选择继续或补充
+  }
+  
+  8. skip() {
+    // 跳过当前 AI
+    currentSpeaker.status = SKIPPED
+    currentIndex++
+    nextSpeaker()
+  }
+  
+  9. end() {
+    // 提前结束
+    state = COMPLETED
+    触发 onComplete 回调
+  }
+}
+```
+
+**并发控制和防失控机制**：
+
+```
+关键保护措施：
+
+1. 状态锁机制：
+   - 每个会话同时只能有一个 AI 在 SPEAKING 状态
+   - 使用分布式锁（Redis）防止并发冲突
+   
+   伪代码：
+   async function triggerAISpeech(speaker) {
+     const lockKey = `session:${sessionId}:lock`
+     const lock = await redis.lock(lockKey, 30000) // 30 秒超时
+     
+     try {
+       if (!lock) {
+         throw new Error('无法获取锁，可能有并发操作')
+       }
+       
+       // 执行 AI 调用
+       ...
+       
+     } finally {
+       await redis.unlock(lockKey)
+     }
+   }
+
+2. 请求验证：
+   - 后端验证每个操作请求的合法性
+   - 检查当前状态是否允许该操作
+   - 验证请求者是否是会话所有者
+   
+   伪代码：
+   async function handleNextSpeaker(sessionId, userId) {
+     const session = await getSession(sessionId)
+     
+     // 验证 1：会话所有者
+     if (session.userId !== userId) {
+       throw new Error('无权操作此会话')
+     }
+     
+     // 验证 2：状态检查
+     if (session.state !== SessionState.AI_FINISHED) {
+       throw new Error('当前状态不允许推进')
+     }
+     
+     // 验证 3：是否有下一位
+     if (session.currentSpeakerIndex >= session.speakers.length - 1) {
+       throw new Error('已是最后一位')
+     }
+     
+     // 执行推进
+     await queue.finishCurrent()
+   }
+
+3. 超时保护：
+   - AI 调用设置超时（如 60 秒）
+   - 超时后自动标记为 FINISHED
+   - 允许用户重试或跳过
+   
+   伪代码：
+   async function triggerAISpeech(speaker) {
+     const timeoutPromise = new Promise((_, reject) => {
+       setTimeout(() => reject(new Error('AI 响应超时')), 60000)
+     })
+     
+     try {
+       await Promise.race([
+         actualAICall(speaker),
+         timeoutPromise
+       ])
+     } catch (error) {
+       if (error.message === 'AI 响应超时') {
+         speaker.status = FINISHED
+         speaker.error = 'timeout'
+         // 通知前端，提供重试选项
+       }
+     }
+   }
+
+4. 频率限制：
+   - 限制用户补充请求的频率（如每 5 秒最多 1 次）
+   - 防止恶意刷接口
+   
+   伪代码：
+   const rateLimiter = new Map() // userId -> lastRequestTime
+   
+   function checkRateLimit(userId) {
+     const lastTime = rateLimiter.get(userId)
+     const now = Date.now()
+     
+     if (lastTime && now - lastTime < 5000) {
+       throw new Error('请求过于频繁，请稍后再试')
+     }
+     
+     rateLimiter.set(userId, now)
+   }
+
+5. 前端禁用机制：
+   - 非当前发言者的按钮全部禁用
+   - AI 发言中禁用所有操作按钮
+   - 使用 loading 状态防止重复点击
+   
+   UI 状态管理：
+   {
+     canSupplement: state === AI_FINISHED && !isSupplementing,
+     canNext: state === AI_FINISHED && hasNextSpeaker,
+     canPause: state === AI_FINISHED,
+     canSkip: state !== COMPLETED,
+     isLoading: state === AI_THINKING || state === AI_SPEAKING
+   }
+```
+
+#### 3.3.3 上下文构建算法
+
+**核心挑战**：
+如何为第 N 位 AI 构建包含前面所有讨论内容的完整上下文？
+
+**解决方案**：
+
+```
+function buildContext(sessionId, currentSpeakerIndex) {
+  
+  // 1. 获取用户原始问题
+  const userQuestion = getSessionUserQuestion(sessionId)
+  
+  // 2. 获取前面所有 AI 的回答（包括补充）
+  const previousMessages = getSessionMessages(sessionId, {
+    where: {
+      type: [AI_RESPONSE, AI_SUPPLEMENT],
+      speakerOrder: { lt: currentSpeakerIndex + 1 } // +1 因为用户是 0
+    },
+    orderBy: { timestamp: 'asc' }
+  })
+  
+  // 3. 获取用户的所有追问
+  const userFollowups = getSessionMessages(sessionId, {
+    where: {
+      type: USER_FOLLOWUP
+    },
+    orderBy: { timestamp: 'asc' }
+  })
+  
+  // 4. 构建对话历史字符串
+  let conversationHistory = ""
+  
+  for (const msg of previousMessages) {
+    const aiName = getAIMemberDisplayName(msg.speaker)
+    
+    if (msg.isSupplemental) {
+      conversationHistory += `\n\n【${aiName} 补充】\n${msg.content}`
+    } else {
+      conversationHistory += `\n\n【${aiName} 的回答】\n${msg.content}`
+    }
+    
+    // 如果有用户追问，也加入
+    const relatedFollowups = userFollowups.filter(
+      f => f.parentMessageId === msg.id
+    )
+    for (const followup of relatedFollowups) {
+      conversationHistory += `\n\n【用户追问】\n${followup.content}`
+    }
+  }
+  
+  // 5. 确定当前 AI 的角色定位
+  const currentSpeaker = getSpeaker(sessionId, currentSpeakerIndex)
+  const totalSpeakers = getSpeakersCount(sessionId)
+  const rolePrompt = generateRolePrompt(
+    currentSpeakerIndex + 1, 
+    totalSpeakers
+  )
+  
+  // 6. 获取 AI 的个性化配置
+  const aiConfig = getFinalConfig(currentSpeaker.aiMemberId)
+  
+  // 7. 构建完整的系统提示词
+  const systemPrompt = `
+${aiConfig.systemPrompt}
+
+你正在参与一个顺序发言讨论。
+
+【讨论话题】
+${userQuestion}
+
+${conversationHistory ? `
+【前面的讨论内容】
+${conversationHistory}
+` : ''}
+
+【你的角色定位】
+${rolePrompt}
+
+【发言要求】
+- 基于前面的讨论内容来回答（如果有）
+- 避免简单重复前面已说过的观点
+- 可以表达认同、补充或提出不同看法
+- 保持逻辑清晰，结构化表达
+- 发言完整后自然结束，不要追问或期待继续
+`
+  
+  // 8. 构建 messages 数组（OpenAI 格式）
+  const messages = [
+    {
+      role: 'system',
+      content: systemPrompt
+    },
+    {
+      role: 'user',
+      content: userQuestion
+    }
+  ]
+  
+  // 9. 将前面的讨论转换为 message 格式（可选）
+  // 这样可以让 AI 更好地理解对话流
+  for (const msg of previousMessages) {
+    messages.push({
+      role: 'assistant',
+      content: `[${getAIMemberDisplayName(msg.speaker)}]: ${msg.content}`,
+      name: msg.speaker // 标识不同的 AI
+    })
+  }
+  
+  return {
+    messages,
+    systemPrompt,
+    conversationHistory,
+    rolePrompt
+  }
+}
+```
+
+**角色定位生成逻辑**：
+
+```
+function generateRolePrompt(currentOrder, totalSpeakers) {
+  
+  // 第一位发言者
+  if (currentOrder === 1) {
+    return `你是第一位发言者。
+请直接回答用户的问题，为后续讨论奠定基础。
+你的回答应该全面但不必面面俱到，因为后面还有 ${totalSpeakers - 1} 位成员会补充。
+重点是提出你的核心观点和主要建议。`
+  }
+  
+  // 最后一位发言者
+  if (currentOrder === totalSpeakers) {
+    return `你是最后一位发言者（第 ${currentOrder}/${totalSpeakers} 位）。
+前面已经有 ${currentOrder - 1} 位成员发言了。
+
+请你：
+1. 简要总结前面各位的主要观点
+2. 指出可能存在的分歧或争议点
+3. 补充大家都没提到的重要方面
+4. 给出你的综合建议或结论性意见`
+  }
+  
+  // 中间位置发言者
+  return `你是第 ${currentOrder}/${totalSpeakers} 位发言者。
+前面已经有 ${currentOrder - 1} 位成员发言了。
+
+请你：
+1. 先简单回应前面的观点（认同或不同意见）
+2. 补充他们遗漏的重要方面
+3. 或者深入探讨某个值得展开的细节
+4. 或者提出不同的视角和替代方案
+
+避免简单重复前面已经详细说过的内容。`
+}
+```
+
+**补充上下文构建**：
+
+```
+function buildSupplementContext(sessionId, speaker, userPrompt) {
+  
+  // 获取该 AI 之前的所有回答（包括之前的补充）
+  const aiPreviousMessages = getSessionMessages(sessionId, {
+    where: {
+      speaker: speaker.aiModelId,
+      type: [AI_RESPONSE, AI_SUPPLEMENT]
+    },
+    orderBy: { timestamp: 'asc' }
+  })
+  
+  // 构建该 AI 的完整回答历史
+  let aiHistory = ""
+  for (const msg of aiPreviousMessages) {
+    if (msg.isSupplemental) {
+      aiHistory += `\n\n【你的第 ${msg.supplementRound} 次补充】\n${msg.content}`
+    } else {
+      aiHistory += `\n\n【你的初始回答】\n${msg.content}`
+    }
+  }
+  
+  // 构建补充提示词
+  const systemPrompt = `
+你之前在讨论中已经发言了。现在用户希望你补充说明。
+
+【你之前的发言】
+${aiHistory}
+
+【用户的补充请求】
+${userPrompt}
+
+请针对用户的请求进行补充回答。
+- 可以展开细节
+- 可以回答追问
+- 可以修正或补充之前的观点
+- 保持与之前回答的一致性
+`
+  
+  const messages = [
+    {
+      role: 'system',
+      content: systemPrompt
+    },
+    {
+      role: 'user',
+      content: userPrompt
+    }
+  ]
+  
+  return { messages, systemPrompt }
+}
+```
+
+#### 3.3.4 流式输出实现
+
+**技术选型**：
+- 后端：Server-Sent Events (SSE) 或 WebSocket
+- 前端：EventSource API 或 WebSocket Client
+
+**SSE 实现方案**（推荐用于单向流）：
+
+**后端实现要点**：
+
+```
+API 端点：
+GET /api/sessions/:sessionId/stream
+
+响应头：
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+
+流程：
+
+1. 客户端建立 SSE 连接
+2. 后端保持连接打开
+3. 每当有新的 AI chunk，通过 SSE 发送
+4. AI 回答完成后发送完成事件
+5. 连接关闭或进入下一位
+
+SSE 消息格式：
+event: ai-chunk
+data: {"sessionId":"xxx","speaker":"gpt-4","content":"部分内容","index":0}
+
+event: ai-complete
+data: {"sessionId":"xxx","speaker":"gpt-4","totalTokens":150}
+
+event: speaker-finished
+data: {"sessionId":"xxx","speaker":"gpt-4","status":"finished"}
+
+event: error
+data: {"sessionId":"xxx","error":"API 调用失败"}
+
+实现伪代码：
+
+async function streamAIResponse(req, res, sessionId, speaker) {
+  // 设置 SSE 响应头
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  
+  try {
+    // 构建上下文
+    const context = buildContext(sessionId, speaker.order - 1)
+    const config = getFinalConfig(speaker.aiMemberId)
+    
+    // 获取对应的 AI 适配器
+    const adapter = getAIAdapter(speaker.aiModelId)
+    
+    // 累积完整回答（用于保存）
+    let fullContent = ""
+    let chunkIndex = 0
+    
+    // 调用流式 API
+    for await (const chunk of adapter.sendStreamingMessage({
+      messages: context.messages,
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      stream: true
+    })) {
+      
+      fullContent += chunk.content
+      
+      // 发送 chunk 到前端
+      res.write(`event: ai-chunk\n`)
+      res.write(`data: ${JSON.stringify({
+        sessionId,
+        speaker: speaker.aiModelId,
+        content: chunk.content,
+        index: chunkIndex++
+      })}\n\n`)
+      
+      // 刷新缓冲区
+      res.flush()
+    }
+    
+    // 保存完整回答到数据库
+    await saveSessionMessage({
+      sessionId,
+      type: MessageType.AI_RESPONSE,
+      speaker: speaker.aiModelId,
+      speakerOrder: speaker.order,
+      content: fullContent,
+      streamCompleted: true
+    })
+    
+    // 发送完成事件
+    res.write(`event: ai-complete\n`)
+    res.write(`data: ${JSON.stringify({
+      sessionId,
+      speaker: speaker.aiModelId,
+      content: fullContent
+    })}\n\n`)
+    
+    // 更新 speaker 状态
+    await updateSpeakerStatus(sessionId, speaker.aiMemberId, 'FINISHED')
+    
+    // 发送状态更新
+    res.write(`event: speaker-finished\n`)
+    res.write(`data: ${JSON.stringify({
+      sessionId,
+      speaker: speaker.aiModelId,
+      status: 'finished'
+    })}\n\n`)
+    
+  } catch (error) {
+    // 错误处理
+    res.write(`event: error\n`)
+    res.write(`data: ${JSON.stringify({
+      sessionId,
+      error: error.message
+    })}\n\n`)
+  } finally {
+    res.end()
+  }
+}
+```
+
+**前端实现要点**：
+
+```
+React 组件伪代码：
+
+function SequentialChat({ sessionId }) {
+  const [messages, setMessages] = useState([])
+  const [currentSpeaker, setCurrentSpeaker] = useState(null)
+  const [streamingContent, setStreamingContent] = useState("")
+  
+  useEffect(() => {
+    // 建立 SSE 连接
+    const eventSource = new EventSource(
+      `/api/sessions/${sessionId}/stream`
+    )
+    
+    // 监听 chunk 事件
+    eventSource.addEventListener('ai-chunk', (event) => {
+      const data = JSON.parse(event.data)
+      
+      // 逐字追加内容
+      setStreamingContent(prev => prev + data.content)
+    })
+    
+    // 监听完成事件
+    eventSource.addEventListener('ai-complete', (event) => {
+      const data = JSON.parse(event.data)
+      
+      // 将完整消息添加到列表
+      setMessages(prev => [...prev, {
+        speaker: data.speaker,
+        content: data.content,
+        type: 'ai-response',
+        timestamp: new Date()
+      }])
+      
+      // 清空流式内容
+      setStreamingContent("")
+    })
+    
+    // 监听发言者完成事件
+    eventSource.addEventListener('speaker-finished', (event) => {
+      const data = JSON.parse(event.data)
+      
+      // 显示操作按钮
+      setShowActions(true)
+    })
+    
+    // 监听错误
+    eventSource.addEventListener('error', (event) => {
+      console.error('SSE Error:', event)
+      eventSource.close()
+    })
+    
+    // 清理
+    return () => {
+      eventSource.close()
+    }
+  }, [sessionId])
+  
+  return (
+    <div>
+      {/* 历史消息 */}
+      {messages.map(msg => (
+        <MessageBubble key={msg.id} message={msg} />
+      ))}
+      
+      {/* 流式输出中的消息 */}
+      {streamingContent && (
+        <MessageBubble 
+          message={{
+            speaker: currentSpeaker,
+            content: streamingContent,
+            isStreaming: true
+          }}
+        />
+      )}
+      
+      {/* 操作按钮 */}
+      {showActions && (
+        <ActionButtons 
+          onSupplement={handleSupplement}
+          onNext={handleNext}
+          onPause={handlePause}
+        />
+      )}
+    </div>
+  )
+}
+```
+
+**WebSocket 实现方案**（备选）：
+
+```
+优点：
+- 双向通信
+- 更灵活的消息类型
+- 更好的连接管理
+
+缺点：
+- 实现复杂度更高
+- 需要心跳保活
+
+适用场景：
+- 需要实时协作功能
+- 需要服务端主动推送
+- 需要双向频繁通信
+
+实现要点：
+1. 使用 Socket.io 或原生 WebSocket
+2. 连接时传递 sessionId 和认证信息
+3. 定义消息协议（type + payload）
+4. 实现心跳机制（每 30 秒 ping）
+5. 断线重连策略
+```
+
+---
+
+## 四、技术难点与解决方案
+
+### 4.1 难点一：防止 AI 对话失控
+
+**问题描述**：
+如果设计不当，AI 之间可能形成自动对话循环，无法停止，导致：
+- 无限消耗 API 调用额度
+- 前端消息刷屏
+- 用户失去控制权
+
+**解决方案**：
+
+**1. 设计原则：用户操作驱动**
+
+```
+核心规则：
+- 每一步都需要用户明确操作
+- 没有 AI 到 AI 的自动触发
+- 系统永远不会自动推进队列
+
+实现：
+- AI-1 回答完成 → 暂停 → 等待用户点击"下一位"
+- 用户点击"下一位" → AI-2 开始回答 → 暂停 → 等待用户操作
+- 循环往复，直到用户主动结束或所有 AI 完成
+```
+
+**2. 后端请求验证**
+
+```
+每个推进请求都需要验证：
+
+验证点 1：状态检查
+if (session.state !== SessionState.AI_FINISHED) {
+  return error('当前状态不允许推进')
+}
+
+验证点 2：用户身份
+if (session.userId !== requestUserId) {
+  return error('无权操作此会话')
+}
+
+验证点 3：队列位置
+if (session.currentIndex >= session.speakers.length) {
+  return error('已是最后一位')
+}
+
+验证点 4：时间间隔（防止快速点击）
+if (now() - session.lastOperationTime < 1000) {
+  return error('操作过于频繁')
+}
+
+验证通过后才执行推进操作
+```
+
+**3. 前端 UI 强制约束**
+
+```
+UI 状态控制：
+
+非当前发言者：
+- 所有操作按钮禁用
+- 显示 "等待 AI-2 发言" 提示
+- 输入框禁用
+
+AI 发言中：
+- "下一位" 按钮禁用
+- "补充" 按钮禁用
+- 仅 "暂停" 和 "跳过" 按钮可用
+
+AI 发言完成：
+- 启用所有操作按钮
+- 高亮 "下一位" 按钮（引导用户）
+
+防重复点击：
+- 点击后立即禁用按钮
+- 显示 loading 状态
+- 操作完成后恢复
+```
+
+**4. 超时和异常保护**
+
+```
+超时保护：
+- AI 调用设置 60 秒超时
+- 超时后自动标记为 FINISHED
+- 提示用户 "AI 响应超时，可以重试或跳过"
+
+异常保护：
+- API 调用失败 → 标记为 ERROR
+- 提供 "重试" 和 "跳过" 选项
+- 不自动推进到下一位
+
+熔断机制：
+- 同一个 AI 连续失败 3 次 → 自动标记为 SKIPPED
+- 避免死循环重试
+```
+
+**5. 服务端锁机制**
+
+```
+使用 Redis 分布式锁：
+
+function acquireLock(sessionId) {
+  const lockKey = `session:${sessionId}:lock`
+  const lockValue = generateUUID()
+  
+  // 尝试获取锁，30 秒过期
+  const acquired = redis.set(
+    lockKey, 
+    lockValue, 
+    'NX',  // 仅当不存在时设置
+    'EX',  // 过期时间
+    30
+  )
+  
+  return { acquired, lockValue }
+}
+
+function releaseLock(sessionId, lockValue) {
+  const lockKey = `session:${sessionId}:lock`
+  
+  // 仅当 lockValue 匹配时才删除（防止误删）
+  const script = `
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+      return redis.call("del", KEYS[1])
+    else
+      return 0
+    end
+  `
+  redis.eval(script, [lockKey], [lockValue])
+}
+
+使用示例：
+async function processNextSpeaker(sessionId) {
+  const { acquired, lockValue } = acquireLock(sessionId)
+  
+  if (!acquired) {
+    throw new Error('另一个操作正在进行中')
+  }
+  
+  try {
+    // 执行推进操作
+    await queue.nextSpeaker()
+  } finally {
+    releaseLock(sessionId, lockValue)
+  }
+}
+```
+
+### 4.2 难点二：流式输出的稳定性
+
+**问题描述**：
+流式输出过程中可能遇到：
+- 网络中断导致流断开
+- 前端渲染性能问题（大量 DOM 更新）
+- 多个流同时存在时的状态管理混乱
+- 用户中途离开页面，流未正常关闭
+
+**解决方案**：
+
+**1. 断线重连机制**
+
+```
+策略设计：
+
+检测断线：
+- SSE 连接的 onerror 事件
+- 心跳超时（30 秒无消息）
+- 网络状态变化事件
+
+重连逻辑：
+1. 记录断线前的位置（chunk index）
+2. 等待 2 秒后尝试重连
+3. 重连时携带 lastChunkIndex 参数
+4. 后端从中断点继续发送
+5. 最多重试 3 次，失败后提示用户手动刷新
+
+前端实现伪代码：
+
+class StreamManager {
+  constructor(sessionId) {
+    this.sessionId = sessionId
+    this.lastChunkIndex = -1
+    this.reconnectAttempts = 0
+    this.maxReconnectAttempts = 3
+    this.reconnectDelay = 2000
+    this.heartbeatTimeout = null
+  }
+  
+  connect() {
+    const url = `/api/sessions/${this.sessionId}/stream?from=${this.lastChunkIndex + 1}`
+    this.eventSource = new EventSource(url)
+    
+    this.eventSource.addEventListener('ai-chunk', (event) => {
+      this.handleChunk(event)
+      this.resetHeartbeat() // 收到消息，重置心跳
+    })
+    
+    this.eventSource.onerror = (error) => {
+      console.error('SSE Error:', error)
+      this.handleDisconnect()
+    }
+    
+    // 启动心跳检测
+    this.startHeartbeat()
+  }
+  
+  handleChunk(event) {
+    const data = JSON.parse(event.data)
+    this.lastChunkIndex = data.index
+    // 更新 UI
+    this.onChunk(data.content)
+  }
+  
+  handleDisconnect() {
+    this.eventSource.close()
+    
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      console.log(`尝试重连... (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`)
+      
+      setTimeout(() => {
+        this.reconnectAttempts++
+        this.connect()
+      }, this.reconnectDelay)
+      
+      // 指数退避
+      this.reconnectDelay *= 2
+    } else {
+      // 重连失败，通知用户
+      this.onReconnectFailed()
+    }
+  }
+  
+  startHeartbeat() {
+    this.heartbeatTimeout = setTimeout(() => {
+      console.warn('心跳超时，视为断线')
+      this.handleDisconnect()
+    }, 30000) // 30 秒
+  }
+  
+  resetHeartbeat() {
+    clearTimeout(this.heartbeatTimeout)
+    this.startHeartbeat()
+  }
+  
+  close() {
+    clearTimeout(this.heartbeatTimeout)
+    if (this.eventSource) {
+      this.eventSource.close()
+    }
+  }
+}
+
+后端实现：
+
+function streamFromIndex(req, res, sessionId, fromIndex) {
+  // 如果 fromIndex > 0，说明是重连
+  if (fromIndex > 0) {
+    // 检查该 chunk 是否已经发送过并保存
+    const savedChunks = getCachedChunks(sessionId)
+    
+    // 快速发送已缓存的 chunks
+    for (let i = fromIndex; i < savedChunks.length; i++) {
+      res.write(`event: ai-chunk\n`)
+      res.write(`data: ${JSON.stringify(savedChunks[i])}\n\n`)
+    }
+    
+    // 继续发送新的 chunks
+    continue from savedChunks.length
+  }
+  
+  // 正常流式发送...
+}
+
+Chunk 缓存策略：
+- 将每个 chunk 缓存到 Redis
+- Key: session:{sessionId}:chunks
+- Value: Array of chunks
+- 过期时间: 5 分钟（流结束后）
+- 用于断线重连时快速恢复
+```
+
+**2. 前端渲染优化**
+
+```
+问题：
+- 每个 chunk 到达都触发 React 重渲染
+- 大量小更新导致性能问题
+- 滚动条跳动影响用户体验
+
+解决方案：
+
+方案 A：批量更新（推荐）
+
+// 使用 debounce 批量更新
+function StreamingMessage({ sessionId, speaker }) {
+  const [content, setContent] = useState("")
+  const contentBufferRef = useRef("")
+  const updateTimerRef = useRef(null)
+  
+  const batchUpdateContent = useCallback(() => {
+    // 批量更新，减少渲染次数
+    setContent(contentBufferRef.current)
+  }, [])
+  
+  useEffect(() => {
+    const stream = new StreamManager(sessionId)
+    
+    stream.onChunk = (chunk) => {
+      // 不立即更新状态，先缓存
+      contentBufferRef.current += chunk
+      
+      // 清除之前的定时器
+      if (updateTimerRef.current) {
+        clearTimeout(updateTimerRef.current)
+      }
+      
+      // 100ms 后批量更新（或累积到一定字符数）
+      updateTimerRef.current = setTimeout(() => {
+        batchUpdateContent()
+      }, 100)
+    }
+    
+    stream.connect()
+    
+    return () => {
+      clearTimeout(updateTimerRef.current)
+      batchUpdateContent() // 组件卸载时确保更新最后的内容
+      stream.close()
+    }
+  }, [sessionId])
+  
+  return <div className="message">{content}<span className="cursor">▊</span></div>
+}
+
+方案 B：虚拟滚动（针对超长内容）
+
+// 如果单条消息超长（如 > 10000 字），使用虚拟滚动
+import { VariableSizeList } from 'react-window'
+
+function LongStreamingMessage({ content }) {
+  const lines = content.split('\n')
+  
+  return (
+    <VariableSizeList
+      height={600}
+      itemCount={lines.length}
+      itemSize={(index) => estimateLineHeight(lines[index])}
+      width="100%"
+    >
+      {({ index, style }) => (
+        <div style={style}>{lines[index]}</div>
+      )}
+    </VariableSizeList>
+  )
+}
+
+方案 C：Web Worker（复杂格式化）
+
+// 如果需要复杂的 Markdown 渲染，放到 Worker 中
+// main thread
+const worker = new Worker('markdown-worker.js')
+
+worker.postMessage({ type: 'render', content: rawContent })
+
+worker.onmessage = (event) => {
+  if (event.data.type === 'rendered') {
+    setRenderedHTML(event.data.html)
+  }
+}
+
+// markdown-worker.js
+importScripts('marked.min.js')
+
+self.onmessage = (event) => {
+  if (event.data.type === 'render') {
+    const html = marked.parse(event.data.content)
+    self.postMessage({ type: 'rendered', html })
+  }
+}
+```
+
+**3. 自动滚动策略**
+
+```
+问题：
+- 用户正在阅读上方内容时，不应该自动滚动
+- 用户在底部时，应该跟随新内容自动滚动
+
+解决方案：
+
+function AutoScrollContainer({ children }) {
+  const containerRef = useRef(null)
+  const [isUserScrolling, setIsUserScrolling] = useState(false)
+  const scrollTimeoutRef = useRef(null)
+  
+  // 检测用户是否手动滚动
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    
+    const handleScroll = () => {
+      // 用户滚动了，标记为手动滚动
+      setIsUserScrolling(true)
+      
+      // 清除之前的定时器
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+      
+      // 2 秒后恢复自动滚动（如果用户滚动到底部）
+      scrollTimeoutRef.current = setTimeout(() => {
+        const isAtBottom = 
+          container.scrollHeight - container.scrollTop - container.clientHeight < 100
+        
+        if (isAtBottom) {
+          setIsUserScrolling(false)
+        }
+      }, 2000)
+    }
+    
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+  
+  // 当内容更新时，决定是否自动滚动
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || isUserScrolling) return
+    
+    // 检查是否在底部（允许 100px 误差）
+    const isNearBottom = 
+      container.scrollHeight - container.scrollTop - container.clientHeight < 100
+    
+    if (isNearBottom) {
+      // 平滑滚动到底部
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }, [children, isUserScrolling])
+  
+  return (
+    <div ref={containerRef} className="scroll-container">
+      {children}
+      
+      {/* 如果用户在上方阅读，显示"回到底部"按钮 */}
+      {isUserScrolling && (
+        <button 
+          className="scroll-to-bottom"
+          onClick={() => {
+            containerRef.current.scrollTo({
+              top: containerRef.current.scrollHeight,
+              behavior: 'smooth'
+            })
+            setIsUserScrolling(false)
+          }}
+        >
+          ↓ 回到底部
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+**4. 内存泄漏防护**
+
+```
+问题：
+- 用户切换聊天室，之前的流未关闭
+- 多个 EventSource 同时存在
+- 定时器未清理
+
+解决方案：
+
+全局流管理器：
+
+class GlobalStreamManager {
+  constructor() {
+    this.activeStreams = new Map() // sessionId -> StreamManager
+  }
+  
+  getStream(sessionId) {
+    return this.activeStreams.get(sessionId)
+  }
+  
+  createStream(sessionId, callbacks) {
+    // 如果已存在，先关闭旧的
+    this.closeStream(sessionId)
+    
+    const stream = new StreamManager(sessionId)
+    stream.onChunk = callbacks.onChunk
+    stream.onComplete = callbacks.onComplete
+    stream.onError = callbacks.onError
+    
+    this.activeStreams.set(sessionId, stream)
+    stream.connect()
+    
+    return stream
+  }
+  
+  closeStream(sessionId) {
+    const stream = this.activeStreams.get(sessionId)
+    if (stream) {
+      stream.close()
+      this.activeStreams.delete(sessionId)
+    }
+  }
+  
+  closeAll() {
+    for (const [sessionId, stream] of this.activeStreams) {
+      stream.close()
+    }
+    this.activeStreams.clear()
+  }
+}
+
+// 全局单例
+const streamManager = new GlobalStreamManager()
+
+React 组件使用：
+
+function ChatRoom({ sessionId }) {
+  useEffect(() => {
+    // 创建流
+    streamManager.createStream(sessionId, {
+      onChunk: (content) => {
+        // 处理 chunk
+      },
+      onComplete: () => {
+        // 处理完成
+      },
+      onError: (error) => {
+        // 处理错误
+      }
+    })
+    
+    // 清理：组件卸载时关闭流
+    return () => {
+      streamManager.closeStream(sessionId)
+    }
+  }, [sessionId]) // sessionId 变化时也会触发清理
+  
+  // ...
+}
+
+页面卸载时清理所有流：
+
+window.addEventListener('beforeunload', () => {
+  streamManager.closeAll()
+})
+```
+
+### 4.3 难点三：多 AI 模型的统一适配
+
+**问题描述**：
+不同 AI 提供商的 API 格式、认证方式、响应格式都不同：
+- OpenAI：使用 API Key，messages 数组格式
+- Anthropic：使用 API Key，prompt 字符串格式
+- 阿里云：使用 AccessKey/SecretKey，专有格式
+- 流式响应格式各不相同
+- Token 计算方式不同
+- 错误码和错误处理不同
+
+**解决方案**：
+
+**1. 适配器模式架构**
+
+```
+设计结构：
+
+                  ┌─────────────────┐
+                  │  AIAdapterBase  │
+                  │   (抽象基类)     │
+                  └─────────────────┘
+                          △
+                          │ 继承
+         ┌────────────────┼────────────────┐
+         │                │                │
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│ GPT4Adapter │  │ClaudeAdapter│  │ QwenAdapter │
+└─────────────┘  └─────────────┘  └─────────────┘
+
+AIAdapterBase 定义统一接口：
+
+abstract class AIAdapterBase {
+  // 基础属性
+  abstract modelId: string
+  abstract modelName: string
+  abstract provider: string
+  abstract pricing: { input: number, output: number } // 每 1K tokens 价格
+  
+  // 必须实现的方法
+  abstract async initialize(): Promise<void>
+  abstract async sendMessage(params: MessageParams): Promise<AIResponse>
+  abstract async sendStreamingMessage(params: MessageParams): AsyncIterator<AIChunk>
+  abstract validateConfig(config: any): boolean
+  
+  // 通用方法（有默认实现）
+  calculateCost(inputTokens: number, outputTokens: number): number {
+    return (inputTokens / 1000) * this.pricing.input + 
+           (outputTokens / 1000) * this.pricing.output
+  }
+  
+  async retryWithBackoff(fn: Function, maxRetries: number = 3): Promise<any> {
+    let lastError
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fn()
+      } catch (error) {
+        lastError = error
+        if (this.isRetryable(error)) {
+          const delay = Math.pow(2, i) * 1000 // 指数退避
+          await sleep(delay)
+        } else {
+          throw error // 不可重试的错误直接抛出
+        }
+      }
+    }
+    throw lastError
+  }
+  
+  isRetryable(error: any): boolean {
+    // 可重试的错误：限流、超时、网络错误
+    const retryableCodes = ['rate_limit_exceeded', 'timeout', 'ECONNRESET']
+    return retryableCodes.includes(error.code)
+  }
+}
+
+统一的数据格式：
+
+interface MessageParams {
+  messages: Message[]        // 统一的消息数组格式
+  systemPrompt?: string      // 系统提示词
+  temperature?: number       // 0-1
+  maxTokens?: number         // 最大生成长度
+  stream?: boolean           // 是否流式
+  stopSequences?: string[]   // 停止词
+  userId?: string            // 用户标识（用于追踪）
+}
+
+interface Message {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+  name?: string  // 可选，用于标识不同的 AI
+}
+
+interface AIResponse {
+  content: string
+  finishReason: 'stop' | 'length' | 'content_filter' | 'error'
+  usage: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+  model: string
+  timestamp: Date
+  raw?: any  // 原始响应（调试用）
+}
+
+interface AIChunk {
+  content: string
+  index: number
+  finishReason?: string
+  delta?: any  // 原始 delta（调试用）
+}
+```
+
+**2. GPT-4 适配器实现**
+
+```
+适配器实现示例（仅展示关键部分）：
+
+class GPT4Adapter extends AIAdapterBase {
+  modelId = 'gpt-4'
+  modelName = 'GPT-4'
+  provider = 'openai'
+  pricing = { input: 0.03, output: 0.06 } // 美元/1K tokens
+  
+  private client: OpenAI
+  
+  async initialize() {
+    // 从环境变量或用户配置读取 API Key
+    const apiKey = process.env.OPENAI_API_KEY || await this.getUserAPIKey()
+    
+    if (!apiKey) {
+      throw new Error('OpenAI API Key 未配置')
+    }
+    
+    this.client = new OpenAI({ apiKey })
+  }
+  
+  validateConfig(config: any): boolean {
+    return config.apiKey && config.apiKey.startsWith('sk-')
+  }
+  
+  async sendMessage(params: MessageParams): Promise<AIResponse> {
+    return this.retryWithBackoff(async () => {
+      const response = await this.client.chat.completions.create({
+        model: this.modelId,
+        messages: this.formatMessages(params.messages, params.systemPrompt),
+        temperature: params.temperature ?? 0.7,
+        max_tokens: params.maxTokens ?? 2000,
+        stop: params.stopSequences,
+        user: params.userId
+      })
+      
+      return this.formatResponse(response)
+    })
+  }
+  
+  async *sendStreamingMessage(params: MessageParams): AsyncIterator<AIChunk> {
+    const stream = await this.client.chat.completions.create({
+      model: this.modelId,
+      messages: this.formatMessages(params.messages, params.systemPrompt),
+      temperature: params.temperature ?? 0.7,
+      max_tokens: params.maxTokens ?? 2000,
+      stream: true,
+      user: params.userId
+    })
+    
+    let index = 0
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta
+      if (delta?.content) {
+        yield {
+          content: delta.content,
+          index: index++,
+          finishReason: chunk.choices[0]?.finish_reason,
+          delta
+        }
+      }
+    }
+  }
+  
+  private formatMessages(messages: Message[], systemPrompt?: string) {
+    const formatted = [...messages]
+    
+    // 如果有系统提示词，添加到开头
+    if (systemPrompt) {
+      formatted.unshift({
+        role: 'system',
+        content: systemPrompt
+      })
+    }
+    
+    return formatted
+  }
+  
+  private formatResponse(rawResponse: any): AIResponse {
+    const choice = rawResponse.choices[0]
+    return {
+      content: choice.message.content,
+      finishReason: choice.finish_reason,
+      usage: {
+        promptTokens: rawResponse.usage.prompt_tokens,
+        completionTokens: rawResponse.usage.completion_tokens,
+        totalTokens: rawResponse.usage.total_tokens
+      },
+      model: rawResponse.model,
+      timestamp: new Date(),
+      raw: rawResponse
+    }
+  }
+}
+```
+
+**3. Claude 适配器实现**
+
+```
+class ClaudeAdapter extends AIAdapterBase {
+  modelId = 'claude-3-5-sonnet'
+  modelName = 'Claude 3.5 Sonnet'
+  provider = 'anthropic'
+  pricing = { input: 0.003, output: 0.015 }
+  
+  private client: Anthropic
+  
+  async initialize() {
+    const apiKey = process.env.ANTHROPIC_API_KEY || await this.getUserAPIKey()
+    if (!apiKey) {
+      throw new Error('Anthropic API Key 未配置')
+    }
+    this.client = new Anthropic({ apiKey })
+  }
+  
+  validateConfig(config: any): boolean {
+    return config.apiKey && config.apiKey.startsWith('sk-ant-')
+  }
+  
+  async sendMessage(params: MessageParams): Promise<AIResponse> {
+    return this.retryWithBackoff(async () => {
+      // Claude 的消息格式不同，需要转换
+      const { system, messages } = this.formatMessagesForClaude(
+        params.messages,
+        params.systemPrompt
+      )
+      
+      const response = await this.client.messages.create({
+        model: this.modelId,
+        system,  // Claude 的 system prompt 是独立字段
+        messages,
+        max_tokens: params.maxTokens ?? 2000,
+        temperature: params.temperature ?? 0.7,
+        stop_sequences: params.stopSequences
+      })
+      
+      return this.formatResponse(response)
+    })
+  }
+  
+  async *sendStreamingMessage(params: MessageParams): AsyncIterator<AIChunk> {
+    const { system, messages } = this.formatMessagesForClaude(
+      params.messages,
+      params.systemPrompt
+    )
+    
+    const stream = await this.client.messages.create({
+      model: this.modelId,
+      system,
+      messages,
+      max_tokens: params.maxTokens ?? 2000,
+      stream: true
+    })
+    
+    let index = 0
+    for await (const event of stream) {
+      // Claude 的流式事件格式不同
+      if (event.type === 'content_block_delta' && 
+          event.delta.type === 'text_delta') {
+        yield {
+          content: event.delta.text,
+          index: index++,
+          delta: event
+        }
+      }
+      
+      if (event.type === 'message_stop') {
+        yield {
+          content: '',
+          index: index,
+          finishReason: event.stop_reason
+        }
+      }
+    }
+  }
+  
+  private formatMessagesForClaude(messages: Message[], systemPrompt?: string) {
+    // Claude 要求消息必须交替出现 user 和 assistant
+    // 且不能以 assistant 开头
+    
+    let system = systemPrompt || ''
+    const formatted = []
+    
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        // Claude 的 system 是独立字段，不在 messages 中
+        system += '\n' + msg.content
+      } else {
+        formatted.push({
+          role: msg.role,
+          content: msg.content
+        })
+      }
+    }
+    
+    // 确保以 user 消息开头
+    if (formatted[0]?.role !== 'user') {
+      formatted.unshift({
+        role: 'user',
+        content: '请回答以下问题。'
+      })
+    }
+    
+    return { system, messages: formatted }
+  }
+  
+  private formatResponse(rawResponse: any): AIResponse {
+    return {
+      content: rawResponse.content[0].text,
+      finishReason: rawResponse.stop_reason,
+      usage: {
+        promptTokens: rawResponse.usage.input_tokens,
+        completionTokens: rawResponse.usage.output_tokens,
+        totalTokens: rawResponse.usage.input_tokens + rawResponse.usage.output_tokens
+      },
+      model: rawResponse.model,
+      timestamp: new Date(),
+      raw: rawResponse
+    }
+  }
+}
+```
+
+**4. 通义千问适配器实现**
+
+```
+class QwenAdapter extends AIAdapterBase {
+  modelId = 'qwen-turbo'
+  modelName = '通义千问'
+  provider = 'alibaba'
+  pricing = { input: 0.002, output: 0.006 } // 人民币/1K tokens
+  
+  private client: any // 阿里云 SDK
+  private accessKeyId: string
+  private accessKeySecret: string
+  
+  async initialize() {
+    this.accessKeyId = process.env.ALIYUN_ACCESS_KEY_ID || await this.getUserConfig('accessKeyId')
+    this.accessKeySecret = process.env.ALIYUN_ACCESS_KEY_SECRET || await this.getUserConfig('accessKeySecret')
+    
+    if (!this.accessKeyId || !this.accessKeySecret) {
+      throw new Error('阿里云 AccessKey 未配置')
+    }
+    
+    // 初始化阿里云 SDK
+    this.client = new AliyunClient({
+      accessKeyId: this.accessKeyId,
+      accessKeySecret: this.accessKeySecret,
+      endpoint: 'https://dashscope.aliyuncs.com/api/v1'
+    })
+  }
+  
+  validateConfig(config: any): boolean {
+    return config.accessKeyId && config.accessKeySecret
+  }
+  
+  async sendMessage(params: MessageParams): Promise<AIResponse> {
+    return this.retryWithBackoff(async () => {
+      const response = await this.client.call({
+        model: this.modelId,
+        input: {
+          messages: this.formatMessages(params.messages, params.systemPrompt)
+        },
+        parameters: {
+          temperature: params.temperature ?? 0.7,
+          max_tokens: params.maxTokens ?? 2000,
+          stop: params.stopSequences
+        }
+      })
+      
+      return this.formatResponse(response)
+    })
+  }
+  
+  async *sendStreamingMessage(params: MessageParams): AsyncIterator<AIChunk> {
+    const response = await this.client.streamCall({
+      model: this.modelId,
+      input: {
+        messages: this.formatMessages(params.messages, params.systemPrompt)
+      },
+      parameters: {
+        temperature: params.temperature ?? 0.7,
+        max_tokens: params.maxTokens ?? 2000,
+        incremental_output: true  // 增量输出
+      }
+    })
+    
+    let index = 0
+    for await (const chunk of response) {
+      if (chunk.output && chunk.output.text) {
+        yield {
+          content: chunk.output.text,
+          index: index++,
+          finishReason: chunk.output.finish_reason,
+          delta: chunk
+        }
+      }
+    }
+  }
+  
+  private formatMessages(messages: Message[], systemPrompt?: string) {
+    const formatted = []
+    
+    // 通义千问支持 system role
+    if (systemPrompt) {
+      formatted.push({
+        role: 'system',
+        content: systemPrompt
+      })
+    }
+    
+    for (const msg of messages) {
+      formatted.push({
+        role: msg.role,
+        content: msg.content
+      })
+    }
+    
+    return formatted
+  }
+  
+  private formatResponse(rawResponse: any): AIResponse {
+    return {
+      content: rawResponse.output.text,
+      finishReason: rawResponse.output.finish_reason,
+      usage: {
+        promptTokens: rawResponse.usage.input_tokens,
+        completionTokens: rawResponse.usage.output_tokens,
+        totalTokens: rawResponse.usage.total_tokens
+      },
+      model: rawResponse.model,
+      timestamp: new Date(),
+      raw: rawResponse
+    }
+  }
+}
+```
+
+**5. 适配器工厂和注册**
+
+```
+适配器注册表：
+
+class AIAdapterRegistry {
+  private static adapters: Map<string, typeof AIAdapterBase> = new Map()
+  private static instances: Map<string, AIAdapterBase> = new Map()
+  
+  // 注册适配器类
+  static register(modelId: string, adapterClass: typeof AIAdapterBase) {
+    this.adapters.set(modelId, adapterClass)
+  }
+  
+  // 获取适配器实例（单例）
+  static async getAdapter(modelId: string): Promise<AIAdapterBase> {
+    // 如果已有实例，直接返回
+    if (this.instances.has(modelId)) {
+      return this.instances.get(modelId)!
+    }
+    
+    // 获取适配器类
+    const AdapterClass = this.adapters.get(modelId)
+    if (!AdapterClass) {
+      throw new Error(`未找到 AI 模型适配器: ${modelId}`)
+    }
+    
+    // 创建并初始化实例
+    const adapter = new AdapterClass()
+    await adapter.initialize()
+    
+    // 缓存实例
+    this.instances.set(modelId, adapter)
+    
+    return adapter
+  }
+  
+  // 获取所有已注册的模型
+  static getAvailableModels(): string[] {
+    return Array.from(this.adapters.keys())
+  }
+}
+
+// 注册所有适配器
+AIAdapterRegistry.register('gpt-4', GPT4Adapter)
+AIAdapterRegistry.register('gpt-3.5-turbo', GPT35Adapter)
+AIAdapterRegistry.register('claude-3-5-sonnet', ClaudeAdapter)
+AIAdapterRegistry.register('claude-3-opus', ClaudeOpusAdapter)
+AIAdapterRegistry.register('qwen-turbo', QwenAdapter)
+AIAdapterRegistry.register('qwen-plus', QwenPlusAdapter)
+
+// 使用示例：
+const adapter = await AIAdapterRegistry.getAdapter('gpt-4')
+const response = await adapter.sendMessage({
+  messages: [{ role: 'user', content: '你好' }]
+})
+```
+
+**6. 错误统一处理**
+
+```
+统一的错误类型：
+
+class AIError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public statusCode?: number,
+    public retryable: boolean = false,
+    public originalError?: any
+  ) {
+    super(message)
+    this.name = 'AIError'
+  }
+}
+
+错误码标准化：
+
+enum AIErrorCode {
+  // 认证错误
+  INVALID_API_KEY = 'invalid_api_key',
+  INSUFFICIENT_QUOTA = 'insufficient_quota',
+  
+  // 请求错误
+  INVALID_REQUEST = 'invalid_request',
+  CONTENT_FILTERED = 'content_filtered',
+  CONTEXT_TOO_LONG = 'context_too_long',
+  
+  // 限流错误（可重试）
+  RATE_LIMIT_EXCEEDED = 'rate_limit_exceeded',
+  
+  // 服务错误（可重试）
+  SERVICE_UNAVAILABLE = 'service_unavailable',
+  TIMEOUT = 'timeout',
+  NETWORK_ERROR = 'network_error',
+  
+  // 其他
+  UNKNOWN_ERROR = 'unknown_error'
+}
+
+各适配器中转换错误：
+
+class GPT4Adapter extends AIAdapterBase {
+  protected handleError(error: any): never {
+    let aiError: AIError
+    
+    if (error.response) {
+      const status = error.response.status
+      const errorData = error.response.data.error
+      
+      switch (status) {
+        case 401:
+          aiError = new AIError(
+            'OpenAI API Key 无效或已过期',
+            AIErrorCode.INVALID_API_KEY,
+            401,
+            false,
+            error
+          )
+          break
+          
+        case 429:
+          aiError = new AIError(
+            'API 调用频率超限，请稍后重试',
+            AIErrorCode.RATE_LIMIT_EXCEEDED,
+            429,
+            true, // 可重试
+            error
+          )
+          break
+          
+        case 400:
+          if (errorData.code === 'context_length_exceeded') {
+            aiError = new AIError(
+              '上下文长度超过限制',
+              AIErrorCode.CONTEXT_TOO_LONG,
+              400,
+              false,
+              error
+            )
+          } else {
+            aiError = new AIError(
+              '请求参数错误',
+              AIErrorCode.INVALID_REQUEST,
+              400,
+              false,
+              error
+            )
+          }
+          break
+          
+        case 500:
+        case 502:
+        case 503:
+          aiError = new AIError(
+            'OpenAI 服务暂时不可用',
+            AIErrorCode.SERVICE_UNAVAILABLE,
+            status,
+            true, // 可重试
+            error
+          )
+          break
+          
+        default:
+          aiError = new AIError(
+            '未知错误',
+            AIErrorCode.UNKNOWN_ERROR,
+            status,
+            false,
+            error
+          )
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      aiError = new AIError(
+        '请求超时',
+        AIErrorCode.TIMEOUT,
+        undefined,
+        true, // 可重试
+        error
+      )
+    } else {
+      aiError = new AIError(
+        '网络错误',
+        AIErrorCode.NETWORK_ERROR,
+        undefined,
+        true, // 可重试
+        error
+      )
+    }
+    
+    throw aiError
+  }
+}
+
+业务层统一错误处理：
+
+async function callAIWithErrorHandling(adapter: AIAdapterBase, params: MessageParams) {
+  try {
+    return await adapter.sendMessage(params)
+  } catch (error) {
+    if (error instanceof AIError) {
+      // 记录错误日志
+      logger.error('AI 调用失败', {
+        code: error.code,
+        message: error.message,
+        modelId: adapter.modelId,
+        retryable: error.retryable
+      })
+      
+      // 根据错误类型返回用户友好的提示
+      switch (error.code) {
+        case AIErrorCode.INVALID_API_KEY:
+          return {
+            error: true,
+            message: 'API 密钥配置错误，请检查设置',
+            action: 'configure_api_key'
+          }
+          
+        case AIErrorCode.RATE_LIMIT_EXCEEDED:
+          return {
+            error: true,
+            message: '请求过于频繁，请稍后再试',
+            action: 'retry_later'
+          }
+          
+        case AIErrorCode.CONTEXT_TOO_LONG:
+          return {
+            error: true,
+            message: '对话历史过长，请新建聊天室或清空历史',
+            action: 'reduce_context'
+          }
+          
+        case AIErrorCode.CONTENT_FILTERED:
+          return {
+            error: true,
+            message: '内容被安全过滤器拦截',
+            action: 'modify_content'
+          }
+          
+        default:
+          return {
+            error: true,
+            message: `AI 服务暂时不可用: ${error.message}`,
+            action: error.retryable ? 'retry' : 'contact_support'
+          }
+      }
+    }
+    
+    // 未知错误
+    throw error
+  }
+}
+```
+### 4.4 难点四：复杂的状态同步
+
+**问题描述**：
+顺序发言模式涉及多个状态需要在前后端之间保持同步：
+- 当前发言者是谁
+- 每个 AI 的状态（等待/发言中/已完成）
+- 补充次数统计
+- 用户的操作权限
+- 如果用户刷新页面，状态如何恢复
+
+**解决方案**：
+
+**1. 状态存储设计**
+
+```
+分层存储策略：
+
+第一层：数据库（持久化存储）
+- 会话基础信息
+- 消息历史
+- 发言者状态
+- 用于页面刷新后恢复
+
+第二层：Redis（实时状态缓存）
+- 当前会话状态
+- 锁状态
+- 临时 chunks 缓存
+- 用于快速读写和分布式场景
+
+第三层：前端状态（UI 响应）
+- React/Vue 状态管理
+- 实时 UI 更新
+- 用于用户交互
+
+数据库表结构：
+
+CREATE TABLE sequential_sessions (
+  id UUID PRIMARY KEY,
+  chatroom_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  user_question TEXT NOT NULL,
+  state VARCHAR(50) NOT NULL, -- IDLE, INITIALIZING, AI_THINKING, AI_SPEAKING, AI_FINISHED, PAUSED, COMPLETED
+  current_speaker_index INTEGER,
+  created_at TIMESTAMP DEFAULT NOW(),
+  started_at TIMESTAMP,
+  paused_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  metadata JSONB,
+  FOREIGN KEY (chatroom_id) REFERENCES chatrooms(id)
+);
+
+CREATE INDEX idx_sessions_chatroom ON sequential_sessions(chatroom_id);
+CREATE INDEX idx_sessions_state ON sequential_sessions(state);
+
+CREATE TABLE session_speakers (
+  id UUID PRIMARY KEY,
+  session_id UUID NOT NULL,
+  ai_member_id UUID NOT NULL,
+  ai_model_id VARCHAR(100) NOT NULL,
+  display_name VARCHAR(100),
+  order_index INTEGER NOT NULL,
+  status VARCHAR(50) NOT NULL, -- WAITING, SPEAKING, FINISHED, SKIPPED
+  start_time TIMESTAMP,
+  end_time TIMESTAMP,
+  supplement_count INTEGER DEFAULT 0,
+  error_message TEXT,
+  FOREIGN KEY (session_id) REFERENCES sequential_sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_speakers_session ON session_speakers(session_id, order_index);
+
+CREATE TABLE session_messages (
+  id UUID PRIMARY KEY,
+  session_id UUID NOT NULL,
+  type VARCHAR(50) NOT NULL, -- USER_QUESTION, USER_FOLLOWUP, AI_RESPONSE, AI_SUPPLEMENT, SYSTEM_NOTIFICATION
+  speaker VARCHAR(100) NOT NULL, -- user 或 ai:<model_id>
+  speaker_order INTEGER,
+  content TEXT NOT NULL,
+  parent_message_id UUID,
+  is_supplemental BOOLEAN DEFAULT FALSE,
+  supplement_round INTEGER,
+  stream_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  metadata JSONB,
+  FOREIGN KEY (session_id) REFERENCES sequential_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_message_id) REFERENCES session_messages(id)
+);
+
+CREATE INDEX idx_messages_session ON session_messages(session_id, created_at);
+
+Redis 数据结构：
+
+Key: session:{sessionId}:state
+Value: {
+  state: "AI_SPEAKING",
+  currentSpeakerIndex: 1,
+  lastUpdateTime: 1698765432000
+}
+TTL: 30 分钟
+
+Key: session:{sessionId}:lock
+Value: {lockId}
+TTL: 30 秒
+
+Key: session:{sessionId}:chunks
+Value: [
+  {index: 0, content: "部分", speaker: "gpt-4"},
+  {index: 1, content: "内容", speaker: "gpt-4"}
+]
+TTL: 5 分钟
+```
+
+**2. 状态恢复机制**
+
+```
+页面刷新后恢复流程：
+
+前端检测到页面加载：
+1. 从 URL 获取 sessionId
+2. 调用 API 获取会话完整状态
+3. 根据状态恢复 UI
+
+API: GET /api/sessions/:sessionId/state
+
+响应：
+{
+  session: {
+    id: "uuid",
+    state: "AI_FINISHED",
+    currentSpeakerIndex: 1,
+    userQuestion: "...",
+    createdAt: "...",
+    pausedAt: null
+  },
+  speakers: [
+    {
+      order: 1,
+      aiModelId: "gpt-4",
+      displayName: "GPT-4",
+      status: "FINISHED",
+      startTime: "...",
+      endTime: "...",
+      supplementCount: 1
+    },
+    {
+      order: 2,
+      aiModelId: "claude",
+      displayName: "Claude",
+      status: "FINISHED",
+      startTime: "...",
+      endTime: "...",
+      supplementCount: 0
+    },
+    {
+      order: 3,
+      aiModelId: "qwen",
+      displayName: "通义千问",
+      status: "WAITING",
+      startTime: null,
+      endTime: null,
+      supplementCount: 0
+    }
+  ],
+  messages: [
+    {
+      id: "uuid",
+      type: "USER_QUESTION",
+      speaker: "user",
+      content: "我想做一个在线教育平台...",
+      timestamp: "..."
+    },
+    {
+      id: "uuid",
+      type: "AI_RESPONSE",
+      speaker: "gpt-4",
+      speakerOrder: 1,
+      content: "对于在线教育平台...",
+      timestamp: "..."
+    },
+    {
+      id: "uuid",
+      type: "USER_FOLLOWUP",
+      speaker: "user",
+      content: "能详细说说直播系统吗？",
+      parentMessageId: "...",
+      timestamp: "..."
+    },
+    {
+      id: "uuid",
+      type: "AI_SUPPLEMENT",
+      speaker: "gpt-4",
+      speakerOrder: 1,
+      content: "关于直播系统...",
+      isSupplemental: true,
+      supplementRound: 1,
+      timestamp: "..."
+    },
+    {
+      id: "uuid",
+      type: "AI_RESPONSE",
+      speaker: "claude",
+      speakerOrder: 2,
+      content: "我看了 GPT-4 的建议...",
+      timestamp: "..."
+    }
+  ],
+  canContinue: true, // 是否可以继续
+  nextAction: "supplement_or_next" // 建议的下一步操作
+}
+
+前端状态恢复逻辑：
+
+function restoreSessionState(stateData) {
+  // 1. 恢复基础信息
+  setSessionState(stateData.session.state)
+  setCurrentSpeakerIndex(stateData.session.currentSpeakerIndex)
+  
+  // 2. 恢复发言者状态
+  setSpeakers(stateData.speakers)
+  
+  // 3. 恢复消息历史
+  setMessages(stateData.messages)
+  
+  // 4. 根据当前状态决定 UI 显示
+  switch (stateData.session.state) {
+    case 'IDLE':
+      // 显示开始按钮
+      setShowStartButton(true)
+      break
+      
+    case 'AI_THINKING':
+      // 显示思考动画
+      setShowThinkingIndicator(true)
+      break
+      
+    case 'AI_SPEAKING':
+      // 重新建立 SSE 连接，从中断点继续
+      const lastMessage = stateData.messages[stateData.messages.length - 1]
+      if (lastMessage && !lastMessage.streamCompleted) {
+        // 该消息未完成，重新请求
+        reconnectStream(stateData.session.id, lastMessage.id)
+      }
+      break
+      
+    case 'AI_FINISHED':
+      // 显示操作按钮
+      setShowActionButtons(true)
+      break
+      
+    case 'PAUSED':
+      // 显示恢复按钮
+      setShowResumeButton(true)
+      break
+      
+    case 'COMPLETED':
+      // 显示总结和导出选项
+      setShowSummary(true)
+      break
+  }
+  
+  // 5. 滚动到最新消息
+  scrollToBottom()
+}
+```
+
+**3. WebSocket 实时同步（多标签页场景）**
+
+```
+问题：
+用户在多个浏览器标签页打开同一个聊天室，
+一个标签页的操作需要同步到其他标签页。
+
+解决方案：WebSocket 广播
+
+服务端：
+
+class SessionBroadcaster {
+  private wss: WebSocketServer
+  private sessions: Map<string, Set<WebSocket>> // sessionId -> WebSocket 连接集合
+  
+  constructor() {
+    this.wss = new WebSocketServer({ port: 8080 })
+    this.sessions = new Map()
+    
+    this.wss.on('connection', (ws, req) => {
+      this.handleConnection(ws, req)
+    })
+  }
+  
+  handleConnection(ws: WebSocket, req: IncomingMessage) {
+    // 从 URL 获取 sessionId
+    const url = new URL(req.url, 'http://localhost')
+    const sessionId = url.searchParams.get('sessionId')
+    const token = url.searchParams.get('token')
+    
+    // 验证身份
+    if (!this.verifyToken(token, sessionId)) {
+      ws.close(1008, 'Unauthorized')
+      return
+    }
+    
+    // 添加到会话连接池
+    if (!this.sessions.has(sessionId)) {
+      this.sessions.set(sessionId, new Set())
+    }
+    this.sessions.get(sessionId).add(ws)
+    
+    // 发送欢迎消息
+    ws.send(JSON.stringify({
+      type: 'connected',
+      sessionId,
+      timestamp: Date.now()
+    }))
+    
+    // 处理消息
+    ws.on('message', (data) => {
+      this.handleMessage(ws, sessionId, data)
+    })
+    
+    // 处理断开
+    ws.on('close', () => {
+      this.sessions.get(sessionId)?.delete(ws)
+      if (this.sessions.get(sessionId)?.size === 0) {
+        this.sessions.delete(sessionId)
+      }
+    })
+  }
+  
+  // 广播状态变更到该会话的所有连接
+  broadcastToSession(sessionId: string, message: any, excludeWs?: WebSocket) {
+    const connections = this.sessions.get(sessionId)
+    if (!connections) return
+    
+    const messageStr = JSON.stringify(message)
+    
+    for (const ws of connections) {
+      if (ws !== excludeWs && ws.readyState === WebSocket.OPEN) {
+        ws.send(messageStr)
+      }
+    }
+  }
+  
+  // 通知状态变更
+  notifyStateChange(sessionId: string, newState: SessionState) {
+    this.broadcastToSession(sessionId, {
+      type: 'state_changed',
+      sessionId,
+      newState,
+      timestamp: Date.now()
+    })
+  }
+  
+  // 通知发言者变更
+  notifySpeakerChange(sessionId: string, speakerIndex: number, speakerStatus: string) {
+    this.broadcastToSession(sessionId, {
+      type: 'speaker_changed',
+      sessionId,
+      speakerIndex,
+      speakerStatus,
+      timestamp: Date.now()
+    })
+  }
+  
+  // 通知新消息
+  notifyNewMessage(sessionId: string, message: any) {
+    this.broadcastToSession(sessionId, {
+      type: 'new_message',
+      sessionId,
+      message,
+      timestamp: Date.now()
+    })
+  }
+}
+
+const broadcaster = new SessionBroadcaster()
+
+// 在状态变更时调用
+async function updateSessionState(sessionId: string, newState: SessionState) {
+  await db.updateSession(sessionId, { state: newState })
+  await redis.set(`session:${sessionId}:state`, JSON.stringify({
+    state: newState,
+    lastUpdateTime: Date.now()
+  }))
+  
+  // 广播到所有连接
+  broadcaster.notifyStateChange(sessionId, newState)
+}
+
+前端：
+
+class SessionWebSocketClient {
+  private ws: WebSocket
+  private sessionId: string
+  private reconnectAttempts: number = 0
+  private handlers: Map<string, Function[]> = new Map()
+  
+  constructor(sessionId: string) {
+    this.sessionId = sessionId
+    this.connect()
+  }
+  
+  connect() {
+    const token = getAuthToken()
+    const url = `ws://localhost:8080?sessionId=${this.sessionId}&token=${token}`
+    
+    this.ws = new WebSocket(url)
+    
+    this.ws.onopen = () => {
+      console.log('WebSocket 连接已建立')
+      this.reconnectAttempts = 0
+    }
+    
+    this.ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      this.handleMessage(data)
+    }
+    
+    this.ws.onerror = (error) => {
+      console.error('WebSocket 错误:', error)
+    }
+    
+    this.ws.onclose = () => {
+      console.log('WebSocket 连接已关闭')
+      this.reconnect()
+    }
+  }
+  
+  reconnect() {
+    if (this.reconnectAttempts < 5) {
+      const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
+      setTimeout(() => {
+        this.reconnectAttempts++
+        this.connect()
+      }, delay)
+    }
+  }
+  
+  handleMessage(data: any) {
+    const handlers = this.handlers.get(data.type) || []
+    handlers.forEach(handler => handler(data))
+  }
+  
+  on(type: string, handler: Function) {
+    if (!this.handlers.has(type)) {
+      this.handlers.set(type, [])
+    }
+    this.handlers.get(type).push(handler)
+  }
+  
+  off(type: string, handler: Function) {
+    const handlers = this.handlers.get(type)
+    if (handlers) {
+      const index = handlers.indexOf(handler)
+      if (index > -1) {
+        handlers.splice(index, 1)
+      }
+    }
+  }
+  
+  close() {
+    this.ws.close()
+  }
+}
+
+// 使用：
+const wsClient = new SessionWebSocketClient(sessionId)
+
+wsClient.on('state_changed', (data) => {
+  // 更新本地状态
+  setSessionState(data.newState)
+  console.log(`会话状态已变更为: ${data.newState}`)
+})
+
+wsClient.on('speaker_changed', (data) => {
+  // 更新发言者状态
+  updateSpeakerStatus(data.speakerIndex, data.speakerStatus)
+})
+
+wsClient.on('new_message', (data) => {
+  // 添加新消息到列表
+  addMessage(data.message)
+  scrollToBottom()
+})
+```
+
+### 4.5 难点五：Token 消耗控制和成本优化
+
+**问题描述**：
+- 顺序发言模式中，后面的 AI 需要看到前面所有内容，导致上下文越来越长
+- Token 消耗成倍增长
+- 用户 API 成本可能很高
+- 如何在保证讨论质量的前提下控制成本
+
+**解决方案**：
+
+**1. 智能上下文裁剪**
+
+```
+策略：
+- 保留用户问题（必须）
+- 保留最近 N 条 AI 回答的摘要（而非完整内容）
+- 当前发言者的前一位 AI 保留完整内容（用于连贯性）
+- 用户的追问全部保留
+
+实现：
+
+function buildOptimizedContext(sessionId: string, currentSpeakerIndex: number) {
+  const maxContextTokens = 4000 // 最大上下文 token 数
+  
+  // 1. 获取用户问题（必须包含）
+  const userQuestion = getSessionUserQuestion(sessionId)
+  let currentTokens = estimateTokens(userQuestion)
+  
+  // 2. 获取所有历史消息
+  const allMessages = getSessionMessages(sessionId, {
+    where: { speakerOrder: { lt: currentSpeakerIndex + 1 } },
+    orderBy: { timestamp: 'desc' } // 倒序，优先保留最新的
+  })
+  
+  const contextParts = []
+  const summaries = []
+  
+  for (const msg of allMessages) {
+    const msgTokens = estimateTokens(msg.content)
+    
+    // 如果是当前发言者的前一位，保留完整内容
+    if (msg.speakerOrder === currentSpeakerIndex) {
+      if (currentTokens + msgTokens < maxContextTokens) {
+        contextParts.unshift({
+          speaker: msg.speaker,
+          content: msg.content,
+          type: 'full'
+        })
+        currentTokens += msgTokens
+      }
+    }
+    // 其他 AI 的回答，生成摘要
+    else if (msg.type === 'AI_RESPONSE') {
+      const summary = await generateSummary(msg.content, 100) // 压缩到 100 tokens
+      const summaryTokens = estimateTokens(summary)
+      
+      if (currentTokens + summaryTokens < maxContextTokens) {
+        summaries.unshift({
+          speaker: msg.speaker,
+          content: summary,
+          type: 'summary'
+        })
+        currentTokens += summaryTokens
+      }
+    }
+    // 用户追问全部保留（通常很短）
+    else if (msg.type === 'USER_FOLLOWUP') {
+      if (currentTokens + msgTokens < maxContextTokens) {
+        contextParts.unshift({
+          speaker: 'user',
+          content: msg.content,
+          type: 'followup'
+        })
+        currentTokens += msgTokens
+      }
+    }
+    
+    // 如果超过限制，停止添加
+    if (currentTokens >= maxContextTokens) {
+      break
+    }
+  }
+  
+  // 3. 构建最终上下文
+  let conversationHistory = ""
+  
+  // 先添加摘要
+  for (const summary of summaries) {
+    conversationHistory += `\n\n【${summary.speaker} 的观点摘要】\n${summary.content}`
+  }
+  
+  // 再添加完整内容
+  for (const part of contextParts) {
+    if (part.type === 'full') {
+      conversationHistory += `\n\n【${part.speaker} 的完整回答】\n${part.content}`
+    } else if (part.type === 'followup') {
+      conversationHistory += `\n\n【用户追问】\n${part.content}`
+    }
+  }
+  
+  return {
+    conversationHistory,
+    estimatedTokens: currentTokens
+  }
+}
+
+// Token 估算函数（简化版，实际应该使用 tiktoken）
+function estimateTokens(text: string): number {
+  // 中文：1 字 ≈ 1.5 tokens
+  // 英文：1 词 ≈ 1.3 tokens
+  // 简化估算：1 字符 ≈ 0.5 tokens
+  return Math.ceil(text.length * 0.5)
+}
+
+// AI 摘要生成（使用便宜的模型）
+async function generateSummary(content: string, maxTokens: number): Promise<string> {
+  // 使用 GPT-3.5-turbo 生成摘要（成本低）
+  const summaryAdapter = await AIAdapterRegistry.getAdapter('gpt-3.5-turbo')
+  
+  const response = await summaryAdapter.sendMessage({
+    messages: [
+      {
+        role: 'user',
+        content: `请将以下内容压缩为 ${maxTokens} tokens 以内的摘要，保留核心观点：\n\n${content}`
+      }
+    ],
+    temperature: 0.3,
+    maxTokens: maxTokens
+  })
+  
+  return response.content
+}
+```
+
+**2. 用户配额管理**
+
+```
+用户配额系统：
+
+数据库表：
+
+CREATE TABLE user_quotas (
+  user_id UUID PRIMARY KEY,
+  plan VARCHAR(50) NOT NULL, -- free, basic, pro, enterprise
+  total_tokens_limit BIGINT, -- 总 token 限制（null 表示无限制）
+  tokens_used BIGINT DEFAULT 0, -- 已使用 tokens
+  tokens_remaining BIGINT, -- 剩余 tokens
+  reset_date DATE, -- 配额重置日期（每月重置）
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE token_usage_logs (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  session_id UUID,
+  ai_model_id VARCHAR(100),
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  total_tokens INTEGER,
+  estimated_cost DECIMAL(10, 4), -- 美元
+  timestamp TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_usage_user_date ON token_usage_logs(user_id, timestamp);
+
+套餐计划：
+
+const PLANS = {
+  free: {
+    name: '免费版',
+    monthlyTokens: 100000, // 10 万 tokens/月
+    price: 0
+  },
+  basic: {
+    name: '基础版',
+    monthlyTokens: 1000000, // 100 万 tokens/月
+    price: 9.99
+  },
+  pro: {
+    name: '专业版',
+    monthlyTokens: 10000000, // 1000 万 tokens/月
+    price: 49.99
+  },
+  enterprise: {
+    name: '企业版',
+    monthlyTokens: null, // 无限制
+    price: 299.99
+  }
+}
+
+配额检查和扣除：
+
+async function checkAndDeductQuota(
+  userId: string,
+  estimatedTokens: number
+): Promise<{ allowed: boolean, reason?: string }> {
+  
+  // 1. 获取用户配额
+  const quota = await db.getUserQuota(userId)
+  
+  // 2. 检查是否过期（每月重置）
+  if (quota.resetDate < new Date()) {
+    await resetMonthlyQuota(userId, quota.plan)
+    quota.tokensRemaining = PLANS[quota.plan].monthlyTokens
+  }
+  
+  // 3. 检查是否有足够配额
+  if (quota.tokensRemaining !== null && quota.tokensRemaining < estimatedTokens) {
+    return {
+      allowed: false,
+      reason: `配额不足。剩余 ${quota.tokensRemaining} tokens，需要 ${estimatedTokens} tokens。`
+    }
+  }
+  
+  // 4. 预扣除（乐观锁）
+  await db.query(`
+    UPDATE user_quotas 
+    SET 
+      tokens_used = tokens_used + $1,
+      tokens_remaining = tokens_remaining - $1,
+      updated_at = NOW()
+    WHERE user_id = $2 
+      AND (tokens_remaining IS NULL OR tokens_remaining >= $1)
+    RETURNING *
+  `, [estimatedTokens, userId])
+  
+  return { allowed: true }
+}
+
+// AI 调用后记录实际使用
+async function recordActualUsage(
+  userId: string,
+  sessionId: string,
+  aiModelId: string,
+  actualTokens: { input: number, output: number }
+) {
+  const totalTokens = actualTokens.input + actualTokens.output
+  
+  // 计算成本
+  const adapter = await AIAdapterRegistry.getAdapter(aiModelId)
+  const cost = adapter.calculateCost(actualTokens.input, actualTokens.output)
+  
+  // 记录日志
+  await db.createTokenUsageLog({
+    userId,
+    sessionId,
+    aiModelId,
+    inputTokens: actualTokens.input,
+    outputTokens: actualTokens.output,
+    totalTokens,
+    estimatedCost: cost,
+    timestamp: new Date()
+  })
+  
+  // 如果实际使用与预估不同，调整配额
+  const estimatedTokens = actualTokens.input + actualTokens.output
+  // 实际实现中可以根据差异调整
+}
+
+前端配额显示：
+
+function QuotaIndicator({ userId }) {
+  const [quota, setQuota] = useState(null)
+  
+  useEffect(() => {
+    async function fetchQuota() {
+      const data = await api.getUserQuota(userId)
+      setQuota(data)
+    }
+    fetchQuota()
+    
+    // 每分钟刷新一次
+    const interval = setInterval(fetchQuota, 60000)
+    return () => clearInterval(interval)
+  }, [userId])
+  
+  if (!quota) return null
+  
+  const usagePercent = quota.tokensRemaining !== null 
+    ? ((quota.tokensUsed / (quota.tokensUsed + quota.tokensRemaining)) * 100).toFixed(1)
+    : 0
+  
+  return (
+    <div className="quota-indicator">
+      <div className="quota-bar">
+        <div 
+          className="quota-used" 
+          style={{ width: `${usagePercent}%` }}
+        />
+      </div>
+      <div className="quota-text">
+        {quota.tokensRemaining !== null ? (
+          <>
+            已使用 {formatNumber(quota.tokensUsed)} / {formatNumber(quota.tokensUsed + quota.tokensRemaining)} tokens
+            ({usagePercent}%)
+          </>
+        ) : (
+          <>无限制套餐</>
+        )}
+      </div>
+      {quota.tokensRemaining !== null && quota.tokensRemaining < 10000 && (
+        <div className="quota-warning">
+          ⚠️ 配额即将用尽，请考虑升级套餐
+          <button onClick={() => navigate('/pricing')}>查看套餐</button>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+**3. 成本估算和提示**
+
+```
+发言前显示成本估算：
+
+function CostEstimator({ sessionId, nextSpeaker }) {
+  const [estimation, setEstimation] = useState(null)
+  
+  useEffect(() => {
+    async function estimateCost() {
+      const result = await api.estimateNextSpeakerCost(sessionId, nextSpeaker)
+      setEstimation(result)
+    }
+    estimateCost()
+  }, [sessionId, nextSpeaker])
+  
+  if (!estimation) return <div>计算中...</div>
+  
+  return (
+    <div className="cost-estimation">
+      <div className="estimation-details">
+        <div>预计输入 tokens: {formatNumber(estimation.inputTokens)}</div>
+        <div>预计输出 tokens: {formatNumber(estimation.outputTokens)}</div>
+        <div>预计总消耗: {formatNumber(estimation.totalTokens)} tokens</div>
+        <div>预计费用: ${estimation.estimatedCost.toFixed(4)}</div>
+      </div>
+      
+      {estimation.warning && (
+        <div className="cost-warning">
+          ⚠️ {estimation.warning}
+        </div>
+      )}
+      
+      <button onClick={handleProceed}>
+        确认并继续 (消耗 {formatNumber(estimation.totalTokens)} tokens)
+      </button>
+    </div>
+  )
+}
+
+后端估算逻辑：
+
+async function estimateNextSpeakerCost(sessionId: string, speakerIndex: number) {
+  // 1. 构建上下文（使用优化后的）
+  const context = buildOptimizedContext(sessionId, speakerIndex)
+  
+  // 2. 获取 AI 配置
+  const speaker = await getSpeaker(sessionId, speakerIndex)
+  const config = await getFinalConfig(speaker.aiMemberId)
+  const adapter = await AIAdapterRegistry.getAdapter(speaker.aiModelId)
+  
+  // 3. 估算 input tokens
+  const inputTokens = context.estimatedTokens
+  
+  // 4. 估算 output tokens（根据 maxTokens）
+  const outputTokens = config.maxTokens || 2000
+  
+  // 5. 计算成本
+  const cost = adapter.calculateCost(inputTokens, outputTokens)
+  
+  // 6. 检查是否需要警告
+  let warning = null
+  if (cost > 0.5) {
+    warning = '此次调用费用较高，建议减少上下文或降低输出长度'
+  }
+  
+  const quota = await getUserQuota(sessionId.userId)
+  if (quota.tokensRemaining && quota.tokensRemaining < inputTokens + outputTokens) {
+    warning = '配额不足，无法完成此次调用'
+  }
+  
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+    estimatedCost: cost,
+    warning
+  }
+}
+```
+
+---
+
+## 五、数据模型设计
+
+### 5.1 核心实体关系图（ER 图）
+
+```
+┌─────────────┐
+│    Users    │
+│─────────────│
+│ id (PK)     │
+│ email       │
+│ username    │
+│ password    │
+│ created_at  │
+└──────┬──────┘
+       │
+       │ 1:N
+       │
+┌──────▼──────────┐
+│   ChatRooms     │
+│─────────────────│
+│ id (PK)         │
+│ user_id (FK)    │
+│ name            │
+│ default_mode    │
+│ global_config   │
+│ created_at      │
+│ last_active_at  │
+└──────┬──────────┘
+       │
+       ├─────────────────┐
+       │                 │
+       │ 1:N             │ 1:N
+       │                 │
+┌──────▼──────────┐  ┌───▼─────────────────┐
+│   AIMembers     │  │ SequentialSessions  │
+│─────────────────│  │─────────────────────│
+│ id (PK)         │  │ id (PK)             │
+│ chatroom_id (FK)│  │ chatroom_id (FK)    │
+│ ai_model_id     │  │ user_question       │
+│ display_name    │  │ state               │
+│ order_index     │  │ current_speaker_idx │
+│ is_enabled      │  │ created_at          │
+│ config (JSON)   │  │ completed_at        │
+└─────────────────┘  └───┬─────────────────┘
+                         │
+                         ├──────────────────┐
+                         │                  │
+                         │ 1:N              │ 1:N
+                         │                  │
+                  ┌──────▼──────────┐  ┌────▼────────────────┐
+                  │ SessionSpeakers │  │  SessionMessages    │
+                  │─────────────────│  │─────────────────────│
+                  │ id (PK)         │  │ id (PK)             │
+                  │ session_id (FK) │  │ session_id (FK)     │
+                  │ ai_member_id(FK)│  │ type                │
+                  │ order_index     │  │ speaker             │
+                  │ status          │  │ content             │
+                  │ start_time      │  │ parent_message_id   │
+                  │ end_time        │  │ is_supplemental     │
+                  │ supplement_count│  │ created_at          │
+                  └─────────────────┘  └─────────────────────┘
+```
+
+### 5.2 完整数据表定义
+
+继续补充完整的数据表结构和索引设计...
+
+我发现文档已经非常详细和庞大了。让我总结并补充最关键的剩余部分。
+
+---
+
+## 九、开发实施计划
+
+### 9.1 开发阶段划分
+
+**第一阶段：基础架构搭建（2 周）**
+
+Week 1:
+- 项目初始化和技术栈选型
+- 数据库设计和创建
+- 用户认证系统
+- 基础 UI 框架搭建
+
+Week 2:
+- 聊天室 CRUD 功能
+- AI 适配器基础架构
+- GPT-4 和 Claude 集成
+- 基础消息展示
+
+**第二阶段：核心功能开发（3 周）**
+
+Week 3:
+- 普通对话模式实现
+- 流式输出功能
+- 消息历史保存
+
+Week 4:
+- 顺序发言模式核心逻辑
+- 发言队列管理器
+- 状态机实现
+
+Week 5:
+- 补充机制
+- 暂停/恢复功能
+- 上下文构建优化
+
+**第三阶段：完善和优化（2 周）**
+
+Week 6:
+- AI 个性化配置
+- 进度可视化
+- 错误处理完善
+
+Week 7:
+- 性能优化
+- Token 消耗控制
+- 配额管理系统
+
+**第四阶段：测试和发布（1 周）**
+
+Week 8:
+- 完整测试
+- Bug 修复
+- 文档完善
+- 部署上线
+
+### 9.2 技术栈选型
+
+**前端**：
+- React 18 + TypeScript
+- Zustand（状态管理）
+- TailwindCSS（样式）
+- React Router（路由）
+- Axios（HTTP 请求）
+- EventSource API（SSE）
+
+**后端**：
+- Node.js + Express（或 NestJS）
+- TypeScript
+- PostgreSQL（主数据库）
+- Redis（缓存和锁）
+- Prisma（ORM）
+- WebSocket（实时通信）
+
+**AI 集成**：
+- OpenAI SDK
+- Anthropic SDK
+- 阿里云 SDK
+
+**部署**：
+- Docker + Docker Compose
+- Nginx（反向代理）
+- PM2（进程管理）
+- AWS/阿里云（服务器）
+
+---
+
+## 十、质量保证方案
+
+### 10.1 测试策略
+
+**单元测试**：
+- AI 适配器功能
+- 上下文构建逻辑
+- Token 估算算法
+- 配额计算
+
+**集成测试**：
+- 完整的顺序发言流程
+- 状态同步
+- 断线重连
+- 多用户并发
+
+**端到端测试**：
+- 用户完整使用场景
+- 跨浏览器兼容性
+- 移动端响应式
+
+### 10.2 关键指标监控
+
+**性能指标**：
+- API 响应时间 < 200ms
+- 流式首字时间 < 2s
+- 页面加载时间 < 3s
+- 内存使用 < 200MB
+
+**业务指标**：
+- 会话完成率 > 80%
+- 用户留存率（7日）> 40%
+- 平均每会话消息数 > 10
+- AI 调用成功率 > 99%
+
+---
+
+## 总结
+
+这份 MVP 文档详细阐述了 AI 聊天室顺序发言系统的：
+
+1. **核心概念**：清晰定义产品价值和功能边界
+2. **功能设计**：完整的聊天室管理、AI 成员管理、顺序发言模式
+3. **技术难点**：AI 失控防护、流式稳定性、多模型适配、状态同步、成本控制
+4. **实现方案**：数据模型、系统架构、关键算法、错误处理
+5. **开发计划**：8 周完整开发路线图
+
+**关键创新点**：
+- ✅ 用户操作驱动，绝不自动循环
+- ✅ 递进式上下文传递，形成讨论链
+- ✅ 灵活的补充机制，深度探讨
+- ✅ 统一的 AI 适配器，易于扩展
+- ✅ 完善的状态管理和容错机制
+
+这个 MVP 版本聚焦核心价值，避免过度设计，确保在 8 周内可以交付一个可用、稳定、有特色的产品。
