@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getPrisma } from '../config/database';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
+import { TOKEN_QUOTAS, QUOTA_RESET_PERIOD_MS, DEFAULT_USER_PLAN } from '../config/constants';
 
 const prisma = getPrisma();
 
@@ -51,13 +52,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Create default quota for user
+    const defaultQuota = TOKEN_QUOTAS[DEFAULT_USER_PLAN];
     await prisma.userQuota.create({
       data: {
         userId: user.id,
-        plan: 'free',
-        totalTokensLimit: 100000, // 100K tokens for free plan
-        tokensRemaining: 100000,
-        resetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        plan: DEFAULT_USER_PLAN,
+        totalTokensLimit: defaultQuota,
+        tokensRemaining: defaultQuota,
+        resetDate: new Date(Date.now() + QUOTA_RESET_PERIOD_MS),
       },
     });
 

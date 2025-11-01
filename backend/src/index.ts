@@ -72,7 +72,6 @@ const startServer = async () => {
     const redis = getRedis();
     if (redis) {
       try {
-        await redis.connect();
         await redis.ping();
         console.log('✓ Redis connected');
       } catch (error) {

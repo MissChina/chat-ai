@@ -66,9 +66,9 @@ The key feature is **user-controlled sequential discussion**:
 
 ### Prerequisites
 - Node.js 18+ 
-- PostgreSQL 14+
-- Redis 6+
-- OpenAI API Key
+- PostgreSQL 14+ (primary database)
+- Redis 6+ (optional for caching)
+- OpenAI API Key (optional, users can provide their own)
 - Anthropic API Key (optional)
 
 ### Installation

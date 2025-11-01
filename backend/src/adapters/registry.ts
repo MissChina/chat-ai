@@ -18,7 +18,7 @@ export class AIAdapterRegistry {
     this.register('gpt-3.5-turbo', gptFactory);
     
     // Claude models
-    const claudeFactory = (modelId: string) => new ClaudeAdapter();
+    const claudeFactory = (modelId: string) => new ClaudeAdapter(modelId);
     this.register('claude-3-5-sonnet-20241022', claudeFactory);
     this.register('claude-3-opus', claudeFactory);
     
@@ -52,10 +52,10 @@ export class AIAdapterRegistry {
   }
 
   static getAvailableModels(): string[] {
-    return Array.from(this.adapters.keys());
+    return Array.from(this.factories.keys());
   }
 
   static hasModel(modelId: string): boolean {
-    return this.adapters.has(modelId);
+    return this.factories.has(modelId);
   }
 }

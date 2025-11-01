@@ -13,20 +13,34 @@ import {
 import { config } from '../config/env';
 
 export class ClaudeAdapter extends AIAdapterBase {
-  modelId = 'claude-3-5-sonnet-20241022';
-  modelName = 'Claude 3.5 Sonnet';
+  modelId: string;
+  modelName: string;
   provider = 'anthropic';
   capabilities: AICapabilities = {
     streaming: true,
     vision: true,
     functionCalling: false,
   };
-  pricing: Pricing = {
-    input: 0.003,  // $0.003 per 1K tokens
-    output: 0.015, // $0.015 per 1K tokens
-  };
+  pricing: Pricing;
 
   private client?: Anthropic;
+
+  constructor(modelId: string = 'claude-3-5-sonnet-20241022') {
+    super();
+    this.modelId = modelId;
+    
+    // Set model name and pricing based on model ID
+    if (modelId.includes('opus')) {
+      this.modelName = 'Claude 3 Opus';
+      this.pricing = { input: 0.015, output: 0.075 };
+    } else if (modelId.includes('sonnet')) {
+      this.modelName = 'Claude 3.5 Sonnet';
+      this.pricing = { input: 0.003, output: 0.015 };
+    } else {
+      this.modelName = 'Claude';
+      this.pricing = { input: 0.003, output: 0.015 };
+    }
+  }
 
   async initialize(): Promise<void> {
     const apiKey = config.anthropicApiKey;
