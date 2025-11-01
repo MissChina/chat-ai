@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     container_name: chatai-postgres
     environment:
-      POSTGRES_USER: chatai
-      POSTGRES_PASSWORD: chatai_password
-      POSTGRES_DB: chatai
+      POSTGRES_USER: ${POSTGRES_USER:-chatai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chatai_password}
+      POSTGRES_DB: ${POSTGRES_DB:-chatai}
     ports:
       - "5432:5432"
     volumes:
@@ -39,7 +39,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://chatai:chatai_password@postgres:5432/chatai?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-chatai}:${POSTGRES_PASSWORD:-chatai_password}@postgres:5432/${POSTGRES_DB:-chatai}?schema=public
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}

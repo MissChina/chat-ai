@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getPrisma } from '../config/database';
 import { AIAdapterRegistry } from '../adapters/registry';
+import { getAIColor } from '../utils/colors';
 
 const prisma = getPrisma();
 
@@ -40,7 +41,7 @@ export const createChatRoom = async (req: Request, res: Response): Promise<void>
           create: aiMembers.map((member: any, index: number) => ({
             aiModelId: member.aiModelId,
             displayName: member.displayName || member.aiModelId,
-            avatarColor: member.avatarColor || `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+            avatarColor: member.avatarColor || getAIColor(member.aiModelId),
             orderIndex: index + 1,
             isEnabled: true,
             config: member.config || {},

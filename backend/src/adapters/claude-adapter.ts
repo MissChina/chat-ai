@@ -136,9 +136,12 @@ export class ClaudeAdapter extends AIAdapterBase {
 
     // Ensure it starts with a user message
     if (formatted.length > 0 && formatted[0]?.role !== 'user') {
+      console.warn(
+        '[ClaudeAdapter] Conversation did not start with a user message. Inserting fallback user prompt.'
+      );
       formatted.unshift({
         role: 'user',
-        content: 'Please answer the following question.',
+        content: 'No user message was found at the start of the conversation. Please respond appropriately to the following context.',
       });
     }
 

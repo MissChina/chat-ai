@@ -60,18 +60,22 @@ export class GPT4Adapter extends AIAdapterBase {
   async sendMessage(params: MessageParams): Promise<AIResponse> {
     if (!this.client) await this.initialize();
 
-    return this.retryWithBackoff(async () => {
-      const response = await this.client!.chat.completions.create({
-        model: this.modelId,
-        messages: this.formatMessages(params.messages, params.systemPrompt),
-        temperature: params.temperature ?? 0.7,
-        max_tokens: params.maxTokens ?? 2000,
-        stop: params.stopSequences,
-        user: params.userId,
-      });
+    try {
+      return await this.retryWithBackoff(async () => {
+        const response = await this.client!.chat.completions.create({
+          model: this.modelId,
+          messages: this.formatMessages(params.messages, params.systemPrompt),
+          temperature: params.temperature ?? 0.7,
+          max_tokens: params.maxTokens ?? 2000,
+          stop: params.stopSequences,
+          user: params.userId,
+        });
 
-      return this.formatResponse(response);
-    });
+        return this.formatResponse(response);
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   async *sendStreamingMessage(params: MessageParams): AsyncIterator<AIChunk> {

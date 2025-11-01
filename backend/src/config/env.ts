@@ -42,6 +42,9 @@ const validateEnv = () => {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('demo')) {
       throw new Error('JWT_SECRET must be set to a secure value in production');
     }
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL must be set in production');
+    }
   }
 };
 
