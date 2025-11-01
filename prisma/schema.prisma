@@ -1,0 +1,202 @@
+// AI Chatroom Sequential Speaking System - Database Schema
+// Based on MVP document specifications
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  chatRooms           ChatRoom[]
+  sequentialSessions  SequentialSession[]
+  userQuota           UserQuota?
+  tokenUsageLogs      TokenUsageLog[]
+  apiKeys             UserAPIKey[]
+
+  @@map("users")
+}
+
+// User API Keys for AI services
+model UserAPIKey {
+  id        String   @id @default(uuid())
+  userId    String
+  provider  String   // openai, anthropic, alibaba
+  apiKey    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("user_api_keys")
+}
+
+// ChatRoom model
+model ChatRoom {
+  id             String    @id @default(uuid())
+  name           String
+  userId         String
+  defaultMode    String    @default("normal") // normal | sequential
+  globalConfig   Json?     // Prisma handles JSON type across different databases
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastActiveAt   DateTime  @default(now())
+  messageCount   Int       @default(0)
+  isStarred      Boolean   @default(false)
+  isPinned       Boolean   @default(false)
+  tags           String?   // JSON string for tags array
+  deletedAt      DateTime?
+  deletedBy      String?
+
+  // Relations
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiMembers          AIMember[]
+  sequentialSessions SequentialSession[]
+
+  @@index([userId])
+  @@index([lastActiveAt])
+  @@map("chatrooms")
+}
+
+// AI Member in a chatroom
+model AIMember {
+  id          String   @id @default(uuid())
+  chatRoomId  String
+  aiModelId   String   // gpt-4, claude-3-5-sonnet, qwen-turbo
+  displayName String
+  avatarColor String?
+  orderIndex  Int      // Speaking order
+  isEnabled   Boolean  @default(true)
+  config      Json?    // AI-specific configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  chatRoom       ChatRoom         @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  sessionSpeaker SessionSpeaker[]
+
+  @@index([chatRoomId, orderIndex])
+  @@map("ai_members")
+}
+
+// Sequential Session - A sequential discussion session
+model SequentialSession {
+  id                  String    @id @default(uuid())
+  chatRoomId          String
+  userId              String
+  userQuestion        String
+  state               String    // IDLE, INITIALIZING, AI_THINKING, AI_SPEAKING, AI_FINISHED, SUPPLEMENTING, PAUSED, COMPLETED, ERROR
+  currentSpeakerIndex Int?
+  createdAt           DateTime  @default(now())
+  startedAt           DateTime?
+  pausedAt            DateTime?
+  completedAt         DateTime?
+  metadata            Json?
+
+  // Relations
+  chatRoom       ChatRoom         @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  speakers       SessionSpeaker[]
+  messages       SessionMessage[]
+
+  @@index([chatRoomId])
+  @@index([state])
+  @@map("sequential_sessions")
+}
+
+// Session Speaker - AI speaker in a sequential session
+model SessionSpeaker {
+  id              String    @id @default(uuid())
+  sessionId       String
+  aiMemberId      String
+  aiModelId       String
+  displayName     String
+  orderIndex      Int
+  status          String    // WAITING, SPEAKING, FINISHED, SKIPPED
+  startTime       DateTime?
+  endTime         DateTime?
+  supplementCount Int       @default(0)
+  errorMessage    String?
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  session  SequentialSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  aiMember AIMember          @relation(fields: [aiMemberId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, orderIndex])
+  @@map("session_speakers")
+}
+
+// Session Message - Message in a sequential session
+model SessionMessage {
+  id               String    @id @default(uuid())
+  sessionId        String
+  type             String    // USER_QUESTION, USER_FOLLOWUP, AI_RESPONSE, AI_SUPPLEMENT, SYSTEM_NOTIFICATION
+  speaker          String    // user or ai:<model_id>
+  speakerOrder     Int?
+  content          String
+  parentMessageId  String?
+  isSupplemental   Boolean   @default(false)
+  supplementRound  Int?
+  streamCompleted  Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  metadata         Json?
+
+  // Relations
+  session       SequentialSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parentMessage SessionMessage?   @relation("MessageThread", fields: [parentMessageId], references: [id])
+  childMessages SessionMessage[]  @relation("MessageThread")
+
+  @@index([sessionId, createdAt])
+  @@map("session_messages")
+}
+
+// User Quota - Token usage quota management
+model UserQuota {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  plan             String    @default("free") // free, basic, pro, enterprise
+  totalTokensLimit Int?      // null means unlimited
+  tokensUsed       Int       @default(0)
+  tokensRemaining  Int?
+  resetDate        DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_quotas")
+}
+
+// Token Usage Log - Track AI API token usage
+model TokenUsageLog {
+  id               String   @id @default(uuid())
+  userId           String
+  sessionId        String?
+  aiModelId        String
+  inputTokens      Int
+  outputTokens     Int
+  totalTokens      Int
+  estimatedCost    Float
+  timestamp        DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("token_usage_logs")
+}
